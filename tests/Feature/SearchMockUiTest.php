@@ -27,6 +27,7 @@ class SearchMockUiTest extends TestCase
     public function test_search_creates_history_and_shows_results(): void
     {
         $user = User::factory()->create(['role' => UserRole::Student]);
+        config()->set('gemini.enabled', false);
         config()->set('elasticsearch.enabled', false);
 
         $response = $this->actingAs($user)->post(route('search.store'), [
@@ -35,6 +36,8 @@ class SearchMockUiTest extends TestCase
 
         $history = SearchHistory::query()->where('user_id', $user->id)->first();
         $this->assertNotNull($history);
+        $this->assertIsArray($history->result);
+        $this->assertArrayHasKey('evidence', $history->result);
 
         $response->assertRedirect(route('search.show', $history));
 
@@ -42,7 +45,6 @@ class SearchMockUiTest extends TestCase
             ->get(route('search.show', ['searchHistory' => $history, 'tab' => 'graph']))
             ->assertOk()
             ->assertSee('Knowledge Graph')
-            ->assertSee('Researcher connections')
             ->assertSee('Node types');
 
         $this->actingAs($user)

@@ -40,6 +40,20 @@ class ActivityLogSeeder extends Seeder
             ]);
         }
 
-        ActivityLog::factory()->count(15)->create();
+        $actions = ['login', 'register', 'edit data', 'search', 'logout'];
+        $statuses = ['success', 'failed'];
+        $sampleIps = ['10.0.0.1', '10.0.0.2', '172.16.0.10', '192.168.0.50', '203.0.113.8'];
+
+        for ($i = 0; $i < 15; $i++) {
+            ActivityLog::query()->create([
+                'ip' => $sampleIps[$i % count($sampleIps)],
+                'action' => $actions[$i % count($actions)],
+                'user_id' => $user?->id,
+                'before' => null,
+                'after' => null,
+                'status' => $statuses[$i % count($statuses)],
+                'created_at' => now()->subHours(24 + $i),
+            ]);
+        }
     }
 }

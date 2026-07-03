@@ -10,8 +10,9 @@ return [
     'api_key' => env('ELASTICSEARCH_API_KEY'),
 
     'indices' => [
-        'docs' => env('ELASTICSEARCH_INDEX_DOCS', 'ku_docs'),
+        'docs' => env('ELASTICSEARCH_INDEX_DOCS', 'ku_bcg_documents'),
         'triples' => env('ELASTICSEARCH_INDEX_TRIPLES', 'ku_triples'),
+        'relations' => env('ELASTICSEARCH_INDEX_RELATIONS', 'ku_bcg_relations'),
         'entity_links' => env('ELASTICSEARCH_INDEX_ENTITY_LINKS', 'ku_entity_links'),
         'learning_paths' => env('ELASTICSEARCH_INDEX_LEARNING_PATHS', 'ku_learning_paths'),
     ],

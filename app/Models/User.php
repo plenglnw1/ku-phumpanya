@@ -14,7 +14,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'account_id'])]
+#[Fillable([
+    'name',
+    'email',
+    'password',
+    'role',
+    'account_id',
+    'google_id',
+    'avatar_url',
+    'profile_completed_at',
+    'faculty',
+    'department',
+    'student_id',
+    'employee_id',
+    'research_affiliation',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -25,6 +39,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return [
             'email_verified_at' => 'datetime',
+            'profile_completed_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
@@ -33,6 +48,24 @@ class User extends Authenticatable implements FilamentUser
     public function isAdmin(): bool
     {
         return $this->role === UserRole::Admin;
+    }
+
+    public function hasCompletedProfile(): bool
+    {
+        return $this->profile_completed_at !== null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function profileFieldsForRole(UserRole $role): array
+    {
+        return match ($role) {
+            UserRole::Student => ['faculty', 'department', 'student_id'],
+            UserRole::Researcher => ['faculty', 'department', 'employee_id', 'research_affiliation'],
+            UserRole::Teacher => ['faculty', 'department', 'employee_id'],
+            UserRole::Admin => ['faculty', 'department', 'employee_id'],
+        };
     }
 
     public function canAccessPanel(Panel $panel): bool

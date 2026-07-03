@@ -15,8 +15,12 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if (! config('auth_flow.password_enabled')) {
+            return redirect()->route('welcome');
+        }
+
         return view('auth.login');
     }
 
@@ -25,6 +29,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        if (! config('auth_flow.password_enabled')) {
+            return redirect()->route('welcome');
+        }
         $request->authenticate();
 
         $request->session()->regenerate();

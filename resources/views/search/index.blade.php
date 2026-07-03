@@ -5,7 +5,7 @@
             <h1 class="font-serif text-3xl font-semibold text-gray-900 sm:text-4xl">Start your next discovery.</h1>
         </div>
 
-        <form method="POST" action="{{ route('search.store') }}" class="w-full">
+        <form method="POST" action="{{ route('search.store') }}" class="w-full" data-search-form>
             @csrf
             <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                 <input
@@ -19,7 +19,8 @@
                 />
                 <button
                     type="submit"
-                    class="rounded-xl bg-phumpanya-900 px-8 py-4 text-sm font-semibold text-white shadow-sm hover:bg-phumpanya-800 focus:outline-none focus:ring-2 focus:ring-phumpanya-900 focus:ring-offset-2"
+                    data-search-submit
+                    class="rounded-xl bg-phumpanya-900 px-8 py-4 text-sm font-semibold text-white shadow-sm hover:bg-phumpanya-800 focus:outline-none focus:ring-2 focus:ring-phumpanya-900 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
                 >
                     Search Now
                 </button>

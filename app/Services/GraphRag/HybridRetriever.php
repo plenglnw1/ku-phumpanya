@@ -11,13 +11,23 @@ final class HybridRetriever
 {
     public function __construct(
         private readonly ElasticClientFactory $factory,
+        private readonly QdrantRetriever $qdrant,
     ) {}
 
     /**
+     * Priority: Qdrant (vector) → Elasticsearch (keyword) → config fallback
+     *
      * @return list<array<string, mixed>>
      */
     public function retrieve(string $query, int $size = 5): array
     {
+        if (config('qdrant.enabled')) {
+            $results = $this->qdrant->retrieve($query, $size);
+            if (! empty($results)) {
+                return $results;
+            }
+        }
+
         $client = $this->factory->make();
         if (! $client instanceof Client) {
             return $this->fallbackRetrieve($query, $size);

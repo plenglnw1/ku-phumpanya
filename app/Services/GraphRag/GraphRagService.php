@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\GraphRag;
 
+use App\Services\GraphRag\Agent\AgentPipeline;
 use Illuminate\Support\Str;
 
 final class GraphRagService
@@ -12,6 +13,7 @@ final class GraphRagService
         private readonly HybridRetriever $retriever,
         private readonly SubgraphBuilder $subgraphBuilder,
         private readonly LearningPathwayRanker $pathwayRanker,
+        private readonly AgentPipeline $agentPipeline,
     ) {}
 
     /**
@@ -23,39 +25,52 @@ final class GraphRagService
     }
 
     /**
-     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>}
+     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>, tier?: string, _meta?: array<string, mixed>}
      */
     public function search(string $query): array
+    {
+        if (config('gemini.enabled')) {
+            return $this->agentPipeline->run($query);
+        }
+
+        return $this->legacySearch($query);
+    }
+
+    /**
+     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>}
+     */
+    private function legacySearch(string $query): array
     {
         $documents = $this->retriever->retrieve($query, 6);
         $topDocument = $documents[0] ?? [];
         $title = (string) ($topDocument['title'] ?? Str::title($query));
 
         $bcgTags = collect($documents)
-            ->flatMap(fn (array $doc): array => $doc['bcg_tags'] ?? [])
+            ->flatMap(fn (array $doc): array => $doc['bcg_tags'] ?? $doc['bcg_pillars'] ?? [])
             ->unique()
             ->values()
             ->all();
 
         $facultyTags = collect($documents)
-            ->flatMap(fn (array $doc): array => $doc['faculty_tags'] ?? [])
+            ->flatMap(fn (array $doc): array => $doc['faculty_tags'] ?? $doc['faculties'] ?? [])
             ->unique()
             ->values()
             ->all();
 
-        $entities = [$title];
-        $entities = array_values(array_unique(array_filter(array_merge($entities, $bcgTags, $facultyTags))));
+        $entities = array_values(array_unique(array_filter(array_merge([$title], $bcgTags, $facultyTags))));
 
         $graph = $this->subgraphBuilder->build($entities, 40, 80);
         $tokens = collect(explode(' ', Str::lower($query)))->filter()->values()->all();
         $paths = $this->pathwayRanker->rank($tokens, $bcgTags, $facultyTags, 3);
 
+        $content = (string) ($topDocument['content'] ?? $topDocument['abstract'] ?? 'No contextual summary found.');
+
         return [
             'title' => $title,
             'overview' => [
-                'intro' => (string) ($topDocument['content'] ?? 'No contextual summary found.'),
+                'intro' => $content,
                 'analogy' => 'GraphRAG links entities and sources so answers are grounded across KU Forest, KUKR, and KU MOOC.',
-                'research_basis' => 'Seeded from SKE_CrossSource_Links.pdf with cross-source triplets.',
+                'research_basis' => 'Seeded from KU BCG corpus with cross-source triplets.',
                 'expert' => 'Knowledge source: KU integrated prototype (GraphRAG Simple).',
             ],
             'knowledge_graph' => $graph,
@@ -87,7 +102,6 @@ final class GraphRagService
         return [
             'estimated_hours' => '90-140',
             'subtitle' => 'Ranked by lexical similarity + BCG tags + faculty overlap',
-            'progress' => 20,
             'phases' => $modules,
         ];
     }
@@ -103,10 +117,9 @@ final class GraphRagService
                 'title' => (string) ($doc['title'] ?? 'Untitled'),
                 'source' => (string) ($doc['source'] ?? 'UNKNOWN'),
                 'url' => (string) ($doc['url'] ?? ''),
-                'snippet' => Str::limit((string) ($doc['content'] ?? ''), 150),
+                'snippet' => Str::limit((string) ($doc['content'] ?? $doc['abstract'] ?? ''), 150),
             ])
             ->values()
             ->all();
     }
 }
-

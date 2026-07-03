@@ -16,7 +16,7 @@
                     </p>
                     <p class="text-sm text-gray-500">
                         Signed in as <span class="font-medium text-gray-700">{{ auth()->user()->name }}</span>
-                        ({{ auth()->user()->role->label() }}).
+                        ({{ auth()->user()->role->label() }}@if(auth()->user()->faculty) · {{ auth()->user()->faculty }}@endif).
                     </p>
                 </div>
             </div>

@@ -17,21 +17,24 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if (! config('auth_flow.password_enabled')) {
+            return redirect()->route('welcome');
+        }
+
         return view('auth.register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
+        if (! config('auth_flow.password_enabled')) {
+            return redirect()->route('welcome');
+        }
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -43,6 +46,7 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => UserRole::Student,
+            'profile_completed_at' => now(),
         ]);
 
         event(new Registered($user));

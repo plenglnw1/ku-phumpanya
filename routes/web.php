@@ -12,7 +12,7 @@ Route::get('/', function () {
     return view('welcome');
 })->middleware('guest')->name('welcome');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     Route::get('/dashboard', fn () => redirect()->route('search.index'))->name('dashboard');
 
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');

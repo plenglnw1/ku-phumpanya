@@ -12,7 +12,18 @@ class SearchHistory extends Model
     protected $fillable = [
         'user_id',
         'query',
+        'result',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'result' => 'array',
+        ];
+    }
 
     public function user(): BelongsTo
     {

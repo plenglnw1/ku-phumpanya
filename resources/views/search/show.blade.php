@@ -10,7 +10,17 @@
     <div class="mx-auto max-w-4xl">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h1 class="text-2xl font-bold text-gray-900">{{ $title }}</h1>
-            <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-500">GraphRAG result</span>
+            <div class="flex flex-wrap gap-2">
+                <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-500">GraphRAG result</span>
+                @if (! empty($topic['tier']))
+                    <span @class([
+                        'rounded-full border px-3 py-1 text-xs font-medium uppercase',
+                        'border-green-200 bg-green-50 text-green-800' => $topic['tier'] === 'basic',
+                        'border-blue-200 bg-blue-50 text-blue-800' => $topic['tier'] === 'intermediate',
+                        'border-purple-200 bg-purple-50 text-purple-800' => $topic['tier'] === 'advanced',
+                    ])>{{ $topic['tier'] }} tier</span>
+                @endif
+            </div>
         </div>
 
         <div class="mb-6 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-sm font-medium">

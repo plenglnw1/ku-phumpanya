@@ -11,7 +11,23 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('auth_flow.password_enabled', true);
+    }
+
+    public function test_login_screen_redirects_when_password_auth_disabled(): void
+    {
+        config()->set('auth_flow.password_enabled', false);
+
+        $response = $this->get('/login');
+
+        $response->assertRedirect(route('welcome', absolute: false));
+    }
+
+    public function test_login_screen_can_be_rendered_when_password_auth_enabled(): void
     {
         $response = $this->get('/login');
 

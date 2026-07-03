@@ -30,9 +30,12 @@ class SearchController extends Controller
             'query' => ['required', 'string', 'max:500'],
         ]);
 
+        $topic = $this->graphRag->search($validated['query']);
+
         $history = SearchHistory::query()->create([
             'user_id' => $request->user()->id,
             'query' => $validated['query'],
+            'result' => $topic,
         ]);
 
         return redirect()->route('search.show', $history);
@@ -42,7 +45,7 @@ class SearchController extends Controller
     {
         abort_unless($searchHistory->user_id === $request->user()->id, 403);
 
-        $topic = $this->graphRag->search($searchHistory->query);
+        $topic = $searchHistory->result ?? $this->graphRag->search($searchHistory->query);
         $tab = $request->query('tab', 'overview');
 
         if (! in_array($tab, ['overview', 'graph', 'learning'], true)) {

@@ -1,9 +1,5 @@
 @props(['path', 'topicTitle' => ''])
 
-@php
-    $progress = (int) ($path['progress'] ?? 0);
-@endphp
-
 <div class="space-y-8">
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -15,10 +11,6 @@
                 <span class="rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-sm text-gray-700">{{ $topicTitle }}</span>
             @endif
         </div>
-        <div class="mt-6 h-2 overflow-hidden rounded-full bg-gray-100">
-            <div class="h-full rounded-full bg-phumpanya-900 transition-all" style="width: {{ $progress }}%"></div>
-        </div>
-        <p class="mt-2 text-xs text-gray-500">{{ $progress }}% complete (mock progress)</p>
     </div>
 
     @foreach ($path['phases'] ?? [] as $phase)

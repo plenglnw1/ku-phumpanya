@@ -3,6 +3,8 @@
 .env
 .env.backup
 .env.production
+.env.neon.local
+.env.neon.production
 .phpactor.json
 .phpunit.result.cache
 /.codex
@@ -27,3 +29,7 @@ Homestead.yaml
 Thumbs.db
 api/php-fpm-bin
 api/laravel/
+.dist/
+dist/
+.vercel
+.env*
