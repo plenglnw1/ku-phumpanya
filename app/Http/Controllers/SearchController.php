@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Search\CreateSearchHistory;
+use App\Actions\Search\ResolveSearchResult;
 use App\Models\SearchHistory;
 use App\Services\GraphRag\GraphRagService;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +16,8 @@ class SearchController extends Controller
 {
     public function __construct(
         private readonly GraphRagService $graphRag,
+        private readonly CreateSearchHistory $createSearchHistory,
+        private readonly ResolveSearchResult $resolveSearchResult,
     ) {}
 
     public function index(Request $request): View
@@ -30,13 +34,10 @@ class SearchController extends Controller
             'query' => ['required', 'string', 'max:500'],
         ]);
 
-        $topic = $this->graphRag->search($validated['query']);
-
-        $history = SearchHistory::query()->create([
-            'user_id' => $request->user()->id,
-            'query' => $validated['query'],
-            'result' => $topic,
-        ]);
+        $history = $this->createSearchHistory->execute(
+            $request->user(),
+            $validated['query'],
+        );
 
         return redirect()->route('search.show', $history);
     }
@@ -45,7 +46,7 @@ class SearchController extends Controller
     {
         abort_unless($searchHistory->user_id === $request->user()->id, 403);
 
-        $topic = $searchHistory->result ?? $this->graphRag->search($searchHistory->query);
+        $topic = $this->resolveSearchResult->execute($searchHistory);
         $tab = $request->query('tab', 'overview');
 
         if (! in_array($tab, ['overview', 'graph', 'learning'], true)) {

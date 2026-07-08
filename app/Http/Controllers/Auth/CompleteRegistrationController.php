@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\UserRole;
+use App\Actions\Auth\CompleteUserProfile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\CompleteRegistrationRequest;
 use App\Support\RedirectAfterLogin;
@@ -13,6 +13,10 @@ use Illuminate\View\View;
 
 class CompleteRegistrationController extends Controller
 {
+    public function __construct(
+        private readonly CompleteUserProfile $completeUserProfile,
+    ) {}
+
     public function create(): View|RedirectResponse
     {
         $user = auth()->user();
@@ -33,33 +37,8 @@ class CompleteRegistrationController extends Controller
 
     public function store(CompleteRegistrationRequest $request): RedirectResponse
     {
-        $user = $request->user();
-        $role = UserRole::from($request->validated('role'));
+        $user = $this->completeUserProfile->execute($request);
 
-        $payload = [
-            'role' => $role,
-            'faculty' => $request->validated('faculty'),
-            'department' => $request->validated('department'),
-            'profile_completed_at' => now(),
-            'student_id' => null,
-            'employee_id' => null,
-            'research_affiliation' => null,
-        ];
-
-        if ($role === UserRole::Student) {
-            $payload['student_id'] = $request->validated('student_id');
-        }
-
-        if (in_array($role, [UserRole::Researcher, UserRole::Teacher], true)) {
-            $payload['employee_id'] = $request->validated('employee_id');
-        }
-
-        if ($role === UserRole::Researcher) {
-            $payload['research_affiliation'] = $request->validated('research_affiliation');
-        }
-
-        $user->update($payload);
-
-        return redirect(RedirectAfterLogin::for($user->fresh()));
+        return redirect(RedirectAfterLogin::for($user));
     }
 }

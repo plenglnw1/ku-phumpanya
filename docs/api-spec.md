@@ -1,7 +1,7 @@
 # KU Phumpanya API Specification
 
-**Version:** `1.0.0`  
-**Last updated:** 2026-07-03  
+**Version:** `1.1.0`  
+**Last updated:** 2026-07-08  
 **App:** `ku-phumpanya` (Laravel 13)
 
 ---
@@ -589,19 +589,19 @@ CompleteRegistrationRequest:
 
 ---
 
-#### `POST /register/complete` — Complete onboarding
+#### `POST /api/auth/register/complete` — Complete onboarding (JSON)
 
 | | |
 |--|--|
-| **Status** | SSR only |
-| **Auth** | `auth` |
-| **Content-Type** | `application/x-www-form-urlencoded` หรือ `multipart/form-data` |
+| **Status** | Implemented |
+| **Auth** | `auth:sanctum` |
+| **Content-Type** | `application/json` |
 
 **Request body** — `CompleteRegistrationRequest`
 
-**Response `302`** → `/search`
+**Response `200`** + `User` JSON
 
-**Planned JSON equivalent:** `POST /api/auth/register/complete` → `200` + `User`
+SSR equivalent: `POST /register/complete` → `302`
 
 ---
 
@@ -609,10 +609,7 @@ CompleteRegistrationRequest:
 
 | | |
 |--|--|
-| **Status** | SSR only |
-| **Auth** | `auth` |
-
-**Planned:** `POST /api/logout` → `204`
+| **Status** | Implemented (`POST /api/logout` → `204`) |
 
 ---
 
@@ -622,7 +619,7 @@ CompleteRegistrationRequest:
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | `auth:sanctum`, `verified`, `profile.complete` |
 
 **Response `200`**
@@ -645,8 +642,8 @@ CompleteRegistrationRequest:
 
 | | |
 |--|--|
-| **Status** | Planned |
-| **Auth** | required |
+| **Status** | Implemented |
+| **Auth** | `auth:sanctum`, `verified`, `profile.complete` |
 
 **Response `200`**
 
@@ -670,7 +667,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned (logic มีใน `SearchController::store`) |
+| **Status** | Implemented |
 | **Auth** | required |
 | **Side effect** | รัน agent pipeline (อาจใช้เวลา 5–30s), cache ใน `search_histories.result` |
 
@@ -711,7 +708,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | required, owner only |
 
 **Query parameters**
@@ -759,7 +756,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | required |
 
 **Query parameters**
@@ -790,7 +787,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | required |
 
 **Response `200`**
@@ -815,7 +812,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | required |
 
 **Response `200`** — `User`
@@ -826,7 +823,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned (logic ใน `ProfileController::update`) |
+| **Status** | Implemented |
 | **Auth** | required |
 
 **Request body**
@@ -850,7 +847,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented (`204`) |
 | **Auth** | required |
 
 **Request body**
@@ -863,7 +860,7 @@ Max **10** items, `latest()` first.
 
 > Google-only users อาจต้องปรับ flow (ยัง require `current_password` ใน SSR)
 
-**Response `302`** (SSR) / **Planned `204`** (API)
+**Response `204`** (API implemented)
 
 ---
 
@@ -873,7 +870,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | none หรือ optional |
 
 **Response `200`**
@@ -896,7 +893,7 @@ Max **10** items, `latest()` first.
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 
 **Response `200`**
 
@@ -1006,4 +1003,5 @@ await api.get('/sanctum/csrf-cookie');
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.1.0 | 2026-07-08 | All `/api/*` Planned endpoints implemented |
 | 1.0.0 | 2026-07-03 | Initial spec — SSR + planned REST contract |

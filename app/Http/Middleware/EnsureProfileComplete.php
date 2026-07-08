@@ -18,7 +18,14 @@ class EnsureProfileComplete
         $user = $request->user();
 
         if ($user !== null && ! $user->hasCompletedProfile()) {
-            if (! $request->routeIs('register.complete', 'logout')) {
+            $exempt = $request->routeIs('register.complete', 'logout')
+                || $request->is('api/auth/register/complete', 'api/logout');
+
+            if (! $exempt) {
+                if ($request->is('api/*')) {
+                    abort(403);
+                }
+
                 return redirect()->route('register.complete');
             }
         }

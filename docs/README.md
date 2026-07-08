@@ -18,10 +18,8 @@
 
 ## สถานะปัจจุบัน
 
-- Backend หลักเป็น **Laravel Blade SSR** — business logic อยู่ใน controllers แล้ว
-- JSON API ยังมีเพียง `GET /api/user` (implemented)
-- สเปกใน `api-spec.md` กำหนด **contract เป้าหมาย** ให้ FE สร้าง SPA ได้โดยไม่ต้อง reverse-engineer จาก Blade
-- Endpoint ที่ mark `Planned` ยังไม่มี route — ต้องให้ Backend implement ก่อน integrate
+- JSON API endpoints in `routes/api.php` — **implemented** (see `docs/api-spec.md`)
+- Backend หลักยังมี **Laravel Blade SSR** สำหรับ web UI เดิม
 
 ## Related services (ไม่ใช่ Laravel API)
 

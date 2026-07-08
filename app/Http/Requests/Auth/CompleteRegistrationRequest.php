@@ -21,6 +21,10 @@ class CompleteRegistrationRequest extends FormRequest
      */
     public function rules(): array
     {
+        if ($this->user()?->hasCompletedProfile()) {
+            return [];
+        }
+
         $role = UserRole::tryFrom((string) $this->input('role'));
 
         $faculties = config('ku_faculties.faculties', []);
