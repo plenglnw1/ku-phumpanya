@@ -12,6 +12,6 @@ final class RedirectAfterLogin
     {
         return $user->isAdmin()
             ? url('/admin')
-            : route('search.index', absolute: false);
+            : rtrim(config('app.frontend_url'), '/').'/learn';
     }
 }

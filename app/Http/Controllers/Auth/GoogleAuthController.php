@@ -53,7 +53,7 @@ class GoogleAuthController extends Controller
         Auth::login($user, remember: true);
 
         if (! $user->hasCompletedProfile()) {
-            return redirect()->route('register.complete');
+            return redirect(rtrim(config('app.frontend_url'), '/').'/register');
         }
 
         return redirect(RedirectAfterLogin::for($user));
