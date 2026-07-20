@@ -31,7 +31,7 @@ class GoogleAuthTest extends TestCase
 
         $response = $this->get('/auth/google/callback');
 
-        $response->assertRedirect(route('register.complete', absolute: false));
+        $response->assertRedirect($this->frontendRedirect('/register'));
         $this->assertAuthenticated();
 
         $this->assertDatabaseHas('users', [
@@ -65,7 +65,7 @@ class GoogleAuthTest extends TestCase
 
         $response = $this->get('/auth/google/callback');
 
-        $response->assertRedirect(route('search.index', absolute: false));
+        $response->assertRedirect($this->frontendRedirect('/learn'));
         $this->assertAuthenticatedAs($user);
     }
 }
