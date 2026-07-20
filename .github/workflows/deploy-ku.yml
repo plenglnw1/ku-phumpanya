@@ -1,0 +1,102 @@
+name: Deploy to KU VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer
+          extensions: mbstring, pdo, pdo_sqlite, openssl, tokenizer, xml, fileinfo, curl, zip, intl, bcmath
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run tests
+        run: php artisan test
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer
+          extensions: mbstring, pdo, pdo_mysql, openssl, tokenizer, xml, fileinfo, curl, zip, intl, bcmath
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build deploy tarball
+        run: bash scripts/build-ku-deploy.sh /tmp/ku-phumpanya-deploy.tgz
+
+      - name: Parse SSH target
+        id: ssh
+        env:
+          KU_SSH_TARGET: ${{ secrets.KU_SSH_HOST }}
+        run: |
+          target="${KU_SSH_TARGET:-ppyku@phumpanya.ku.ac.th}"
+          echo "user=${target%%@*}" >> "$GITHUB_OUTPUT"
+          echo "host=${target#*@}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball and setup script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.ssh.outputs.host }}
+          username: ${{ steps.ssh.outputs.user }}
+          key: ${{ secrets.KU_SSH_KEY }}
+          source: /tmp/ku-phumpanya-deploy.tgz,scripts/ku-vm-remote-setup.sh
+          target: ~/
+
+      - name: Run remote setup
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          KU_MYSQL_PASSWORD: ${{ secrets.KU_MYSQL_PASSWORD }}
+          KU_DEPLOY_MODE: ${{ vars.KU_DEPLOY_MODE }}
+        with:
+          host: ${{ steps.ssh.outputs.host }}
+          username: ${{ steps.ssh.outputs.user }}
+          key: ${{ secrets.KU_SSH_KEY }}
+          envs: KU_MYSQL_PASSWORD,KU_DEPLOY_MODE
+          script: |
+            set -euo pipefail
+            export KU_MYSQL_PASSWORD
+            if [ -n "${KU_DEPLOY_MODE:-}" ]; then
+              export KU_DEPLOY_MODE
+            fi
+            bash ~/ku-vm-remote-setup.sh
+
+      - name: Smoke test
+        run: |
+          curl -fsS -o /dev/null -w "GET / → HTTP %{http_code}\n" "https://phumpanya.ku.ac.th/"
+          curl -fsS -o /dev/null -w "GET /up → HTTP %{http_code}\n" "https://phumpanya.ku.ac.th/up"

@@ -5,6 +5,7 @@
 | เอกสาร | คำอธิบาย |
 |--------|----------|
 | [api-spec.md](./api-spec.md) | REST API contract (OpenAPI-style, Markdown) |
+| [DEPLOY-KU-VM.md](./DEPLOY-KU-VM.md) | KU hosting deploy (Mode A/B), GitHub Actions SCP/SSH |
 
 ## Quick reference
 

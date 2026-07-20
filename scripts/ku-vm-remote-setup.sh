@@ -3,12 +3,73 @@
 # Usage:
 #   export KU_MYSQL_PASSWORD='your-mysql-password'
 #   bash ku-vm-remote-setup.sh
+#
+# Optional:
+#   KU_DEPLOY_MODE=demo   — force QDRANT/GEMINI off (Mode A)
+#   KU_DEPLOY_MODE=ske    — leave Qdrant/Gemini env as-is (Mode B)
+#   (unset)               — disable AI only when cloud keys are absent
 set -euo pipefail
 
 APP_DIR="${KU_APP_DIR:-$HOME/ku-phumpanya}"
 HTML_DIR="${KU_HTML_DIR:-$HOME/html}"
 TARBALL="${KU_TARBALL:-$HOME/ku-phumpanya-deploy.tgz}"
 ENV_FILE="$APP_DIR/.env"
+
+env_get() {
+  local key="$1"
+  local line
+  line="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1 || true)"
+  if [ -z "$line" ]; then
+    echo ""
+    return 0
+  fi
+  echo "${line#*=}" | sed -e 's/^["'\'' ]*//' -e 's/["'\'' ]*$//'
+}
+
+env_set() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    awk -v k="$key" -v v="$value" 'BEGIN{found=0} $0 ~ "^" k "=" {print k "=" v; found=1; next} {print} END{if(!found) print k "=" v}' "$ENV_FILE" > "$ENV_FILE.tmp" && mv "$ENV_FILE.tmp" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
+
+apply_ku_env_baseline() {
+  local deploy_mode="${KU_DEPLOY_MODE:-}"
+  local qdrant_host qdrant_key qdrant_embed gemini_key
+
+  env_set "ELASTICSEARCH_ENABLED" "false"
+  env_set "APP_URL" "https://phumpanya.ku.ac.th"
+
+  if ! grep -q '^SANCTUM_STATEFUL_DOMAINS=' "$ENV_FILE" 2>/dev/null; then
+    env_set "SANCTUM_STATEFUL_DOMAINS" "phumpanya.ku.ac.th,www.phumpanya.ku.ac.th"
+  fi
+
+  if [ "$deploy_mode" = "demo" ]; then
+    env_set "QDRANT_ENABLED" "false"
+    env_set "GEMINI_ENABLED" "false"
+    return 0
+  fi
+
+  if [ "$deploy_mode" = "ske" ]; then
+    return 0
+  fi
+
+  qdrant_host="$(env_get QDRANT_HOST)"
+  qdrant_key="$(env_get QDRANT_API_KEY)"
+  qdrant_embed="$(env_get QDRANT_EMBEDDING_URL)"
+  gemini_key="$(env_get GEMINI_API_KEY)"
+
+  if [ -z "$qdrant_host" ] || [ -z "$qdrant_embed" ] || [[ "$qdrant_host" == http://localhost* ]] || [[ "$qdrant_host" == http://127.0.0.1* ]]; then
+    env_set "QDRANT_ENABLED" "false"
+  fi
+
+  if [ -z "$gemini_key" ]; then
+    env_set "GEMINI_ENABLED" "false"
+  fi
+}
 
 echo "==> Phase 0: recon"
 php -v
@@ -28,6 +89,11 @@ fi
 
 echo "==> extract app to $APP_DIR"
 mkdir -p "$APP_DIR"
+ENV_BACKUP=""
+if [ -f "$HTML_DIR/ku-phumpanya-app/.env" ]; then
+  ENV_BACKUP="$(mktemp)"
+  cp "$HTML_DIR/ku-phumpanya-app/.env" "$ENV_BACKUP"
+fi
 tar xzf "$TARBALL" -C "$APP_DIR"
 find "$APP_DIR" -name '._*' -delete 2>/dev/null || true
 
@@ -40,6 +106,11 @@ if [ "$APP_DIR" != "$HTML_DIR/ku-phumpanya-app" ] && [ -f "$APP_DIR/artisan" ]; 
     APP_DIR="$HTML_DIR/ku-phumpanya-app"
     ln -sfn "$APP_DIR" "$HOME/ku-phumpanya"
   fi
+fi
+ENV_FILE="$APP_DIR/.env"
+if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
+  cp "$ENV_BACKUP" "$ENV_FILE"
+  rm -f "$ENV_BACKUP"
 fi
 
 echo "==> .env"
@@ -61,8 +132,7 @@ fi
 if [ -n "${KU_MYSQL_PASSWORD:-}" ]; then
   awk -v pw="$KU_MYSQL_PASSWORD" 'BEGIN{found=0} /^DB_PASSWORD=/{print "DB_PASSWORD=" pw; found=1; next} {print} END{if(!found) print "DB_PASSWORD=" pw}' "$ENV_FILE" > "$ENV_FILE.tmp" && mv "$ENV_FILE.tmp" "$ENV_FILE"
 fi
-perl -pi -e 's|^APP_URL=.*|APP_URL=https://phumpanya.ku.ac.th|' "$ENV_FILE"
-perl -pi -e 's/^ELASTICSEARCH_ENABLED=.*/ELASTICSEARCH_ENABLED=false/' "$ENV_FILE"
+apply_ku_env_baseline
 
 echo "==> permissions"
 cd "$APP_DIR"
