@@ -76,6 +76,13 @@ final class RetrievalLinker
             }
         }
 
+        // The relations index carries the real cross-source triples; the seed config
+        // only knows topic→faculty and topic→course, which cannot form a path.
+        $relations = $this->hybrid->retrieveRelations($query, $size);
+        if (! empty($relations)) {
+            return $relations;
+        }
+
         return $this->fetchRelationsFromConfig($query);
     }
 
