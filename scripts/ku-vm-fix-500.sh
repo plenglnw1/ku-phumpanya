@@ -4,6 +4,7 @@
 set -euo pipefail
 
 HTML_DIR="${KU_HTML_DIR:-$HOME/html}"
+PUBLIC_DIR="${KU_PUBLIC_DIR:-$HTML_DIR/public}"
 HTML_APP="$HTML_DIR/ku-phumpanya-app"
 
 # App may live under ~/html/ku-phumpanya-app (open_basedir) or ~/ku-phumpanya
@@ -41,7 +42,7 @@ if ! php -r "exit(is_readable('${HTML_APP}/vendor/autoload.php') ? 0 : 1);" 2>/d
 fi
 
 if [ -f "$APP_DIR/deploy/ku-vm/app-deny.htaccess" ]; then
-  cp "$APP_DIR/deploy/ku-vm/app-deny.htaccess" "$APP_DIR/.htaccess"
+  rm -f "$APP_DIR/.htaccess"
 fi
 
 echo "==> permissions (webadmin group)"
@@ -53,11 +54,12 @@ fi
 # Apache must read vendor + app (do not chmod vendor/bin — breaks artisan)
 chmod -R u+rwX,g+rwX "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" 2>/dev/null || true
 
-echo "==> minimal .htaccess (drop Options -MultiViews)"
+echo "==> minimal .htaccess in $PUBLIC_DIR (Apache DOCUMENT_ROOT)"
+mkdir -p "$PUBLIC_DIR"
 if [ -f "$APP_DIR/deploy/ku-vm/htaccess.minimal" ]; then
-  cp "$APP_DIR/deploy/ku-vm/htaccess.minimal" "$HTML_DIR/.htaccess"
+  cp "$APP_DIR/deploy/ku-vm/htaccess.minimal" "$PUBLIC_DIR/.htaccess"
 else
-  cat > "$HTML_DIR/.htaccess" <<'HTA'
+  cat > "$PUBLIC_DIR/.htaccess" <<'HTA'
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} .
@@ -70,8 +72,15 @@ HTA
 fi
 
 echo "==> index.php + diagnostic"
-cp "$APP_DIR/deploy/ku-vm/html-index.php" "$HTML_DIR/index.php"
-cp "$APP_DIR/deploy/ku-vm/ku-check.php" "$HTML_DIR/ku-check.php"
+if [ -f "$APP_DIR/deploy/ku-vm/public-index.php" ]; then
+  cp "$APP_DIR/deploy/ku-vm/public-index.php" "$PUBLIC_DIR/index.php"
+else
+  cp "$APP_DIR/deploy/ku-vm/html-index.php" "$PUBLIC_DIR/index.php"
+fi
+if [ -d "$APP_DIR/public" ]; then
+  rsync -a --exclude='index.php' "$APP_DIR/public/" "$PUBLIC_DIR/" 2>/dev/null || true
+fi
+cp "$APP_DIR/deploy/ku-vm/ku-check.php" "$PUBLIC_DIR/ku-check.php"
 
 echo "==> clear caches (avoid stale broken config)"
 cd "$APP_DIR"
@@ -94,4 +103,4 @@ echo "If ku-check.php works but / is 500, check:"
 echo "  tail -30 $APP_DIR/storage/logs/laravel.log"
 echo ""
 echo "Delete ku-check.php when done:"
-echo "  rm $HTML_DIR/ku-check.php"
+echo "  rm $PUBLIC_DIR/ku-check.php"

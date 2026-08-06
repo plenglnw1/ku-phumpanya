@@ -8,25 +8,29 @@ KU shared hosting constraints: **5 GB home quota**, SFTP port 22, MySQL on `127.
 
 | Mode | Where | Flags / services |
 |------|-------|------------------|
-| **A — Demo** | KU only (default) | `QDRANT_ENABLED=false`, `GEMINI_ENABLED=false`, `ELASTICSEARCH_ENABLED=false` — GraphRAG config fallback |
-| **B — SKE real** | KU Laravel + Vercel Next + Qdrant Cloud + external embed | Fill cloud keys in server `.env`, set `FRONTEND_URL`, flip `*_ENABLED=true` |
+| **A — Demo** | KU only (default) | `QDRANT_ENABLED=false`, `GEMINI_ENABLED=false`, `ELASTICSEARCH_ENABLED=false` — GraphRAG config fallback; Next SPA static under `html/public` |
+| **B — SKE real** | KU Laravel + same-domain Next static (or Vercel) + Qdrant Cloud + external embed | Same host preferred: `FRONTEND_URL=APP_URL`; cloud keys on server; flip `*_ENABLED=true` |
 | **C — Full stack** | Separate VPS (Huawei/AWS) | Out of scope here — use sala-panya-style Docker compose on your own VM |
 
 Mode A is the default after first deploy. Mode B = ops change `.env` on server (no code fork).
+
+**Same-domain Next (recommended):** no Node daemon on KU. Build Next with `output: 'export'` on Mac/CI, merge `out/` into Laravel `public/` (skip `admin/` so Filament keeps `/admin`). Apache serves SPA HTML; Laravel handles `/api`, `/auth`, `/sanctum`.
 
 ```mermaid
 flowchart LR
   subgraph modeA [Mode A Demo]
     L1[Laravel KU]
+    Spa1[Next static]
     M1[(MySQL)]
+    Spa1 --> L1
     L1 --> M1
   end
   subgraph modeB [Mode B SKE]
-    Next[Next Vercel]
+    Spa2[Next static or Vercel]
     L2[Laravel KU]
     Q[Qdrant Cloud]
     E[embed external]
-    Next --> L2
+    Spa2 --> L2
     L2 --> Q
     L2 --> E
   end
@@ -98,11 +102,14 @@ Upload to `~/`:
 - `dist/ku-phumpanya-deploy.tgz` (build locally first)
 - `scripts/ku-vm-remote-setup.sh`
 
-Build tarball locally:
+Build tarball locally (Laravel + Next static from `../KU-BCG`):
 
 ```bash
 bash scripts/build-ku-deploy.sh dist/ku-phumpanya-deploy.tgz
+# skip Next merge: KU_SKIP_NEXT_BUILD=1 bash scripts/build-ku-deploy.sh ...
 ```
+
+`build-ku-deploy.sh` runs `NEXT_PUBLIC_API_URL=` (same-origin) then merges `KU-BCG/out/` → `public/` (excludes `admin/` and never overwrites `index.php`).
 
 ### SSH then run
 
@@ -122,8 +129,8 @@ bash ~/ku-vm-remote-setup.sh
 3. Move app → `~/html/ku-phumpanya-app` (open_basedir)
 4. Apply KU env baseline (`ELASTICSEARCH_ENABLED=false`; AI off unless Mode B keys present)
 5. `migrate --force` + `db:seed --force`
-6. Sync `public/*` → `~/html/` + custom `index.php`
-7. `config:cache` + `route:cache` + `view:cache`
+6. Sync `public/*` → `~/html/public/` + KU `public-index.php` (includes Next SPA folders: `learn/`, `register/`, …)
+7. `config:cache` + `route:clear` + `view:cache`
 
 ### `KU_DEPLOY_MODE`
 
@@ -137,11 +144,14 @@ bash ~/ku-vm-remote-setup.sh
 
 ## Mode B — enable SKE on KU
 
-Edit `~/html/ku-phumpanya-app/.env` on server:
+### Same-domain Next static (default)
+
+Edit `~/html/ku-phumpanya-app/.env`:
 
 ```env
-FRONTEND_URL=https://your-next-app.vercel.app
-SANCTUM_STATEFUL_DOMAINS=phumpanya.ku.ac.th,www.phumpanya.ku.ac.th,your-next-app.vercel.app
+APP_URL=https://phumpanya.ku.ac.th
+FRONTEND_URL=https://phumpanya.ku.ac.th
+SANCTUM_STATEFUL_DOMAINS=phumpanya.ku.ac.th,www.phumpanya.ku.ac.th
 
 QDRANT_ENABLED=true
 QDRANT_HOST=https://xxxx.cloud.qdrant.io
@@ -159,7 +169,16 @@ cd ~/html/ku-phumpanya-app
 php artisan config:clear && php artisan config:cache
 ```
 
-Next.js deploys from **frontend repo** on Vercel — not from this repo.
+OAuth redirects to `/learn/` on the same host. Filament stays at `/admin` (Next `admin/` is not deployed).
+
+### Optional: Vercel frontend instead
+
+```env
+FRONTEND_URL=https://your-next-app.vercel.app
+SANCTUM_STATEFUL_DOMAINS=phumpanya.ku.ac.th,www.phumpanya.ku.ac.th,your-next-app.vercel.app
+```
+
+Rebuild the Vercel app with `NEXT_PUBLIC_API_URL=https://phumpanya.ku.ac.th` (must Redeploy after env change).
 
 ---
 
@@ -175,11 +194,20 @@ Next.js deploys from **frontend repo** on Vercel — not from this repo.
 ## Server layout
 
 ```
-~/html/ku-phumpanya-app/   # Laravel app (open_basedir)
-~/html/index.php           # Entry point
-~/html/.htaccess           # Apache rewrite
+~/html/
+  public/                  # Apache DOCUMENT_ROOT (web root จริง)
+    index.php              # entry → ../ku-phumpanya-app
+    .htaccess              # SPA rewrite + Laravel fallback
+    learn/ register/ …     # Next static export (same-domain SPA)
+    build/ css/ js/ ...
+  ku-phumpanya-app/        # Laravel app (.env, vendor, artisan)
 ~/ku-phumpanya             # symlink → ku-phumpanya-app
 ```
+
+**สำคัญ:** KU ใช้ `html/public/` เป็น document root — **ไม่ใช่** `html/` ตรงๆ  
+phpinfo จะแสดง `DOCUMENT_ROOT=/home/web/.../html/public`
+
+**ไม่รัน Node บน KU.** Build Next บน Mac/CI เท่านั้น.
 
 Env template: [`.env.ku.production.example`](../.env.ku.production.example)
 
@@ -212,7 +240,7 @@ Do **not** paste multi-line shell blocks into an active SSH session — run the 
 1. https://phumpanya.ku.ac.th/hello.php → `PHP 8.4.x` + `autoload=OK`
 2. https://phumpanya.ku.ac.th/ → Laravel home
 3. https://phumpanya.ku.ac.th/up → health
-4. `rm ~/html/hello.php` when done
+4. `rm ~/html/public/hello.php` when done
 
 ```bash
 tail -50 ~/html/ku-phumpanya-app/storage/logs/laravel.log
@@ -221,9 +249,10 @@ php ~/html/ku-phumpanya-app/artisan config:clear
 
 | Issue | Fix |
 |-------|-----|
-| hello.php 500 | `.htaccess` broken — re-run `ku-vm-recover.sh` |
+| Still shows phpinfo | Fix **`~/html/public/index.php`** — not `~/html/index.php` (Apache docroot is `html/public`) |
+| hello.php 500 | **Remove `~/html/ku-phumpanya-app/.htaccess`** — `Require all denied` breaks whole vhost on KU; also delete `._*` files |
 | hello.php OK, / 500 | Check `storage/logs/laravel.log` |
-| 404 routes | Ensure `~/html/.htaccess` exists |
+| 404 routes | Ensure `~/html/public/.htaccess` exists |
 | DB error | `DB_HOST=127.0.0.1`, verify MySQL password |
 | Quota full | `df -h ~` — prune logs/backups under 5 GB |
 

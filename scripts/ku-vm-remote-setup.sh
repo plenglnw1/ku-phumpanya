@@ -10,10 +10,45 @@
 #   (unset)               — disable AI only when cloud keys are absent
 set -euo pipefail
 
-APP_DIR="${KU_APP_DIR:-$HOME/ku-phumpanya}"
 HTML_DIR="${KU_HTML_DIR:-$HOME/html}"
+APP_DIR="${KU_APP_DIR:-$HTML_DIR/ku-phumpanya-app}"
 TARBALL="${KU_TARBALL:-$HOME/ku-phumpanya-deploy.tgz}"
 ENV_FILE="$APP_DIR/.env"
+
+fix_broken_app_symlink() {
+  if [ ! -L "$APP_DIR" ]; then
+    return 0
+  fi
+
+  local target
+  target="$(readlink "$APP_DIR" 2>/dev/null || true)"
+  if [ -z "$target" ] || [ "$target" = "$APP_DIR" ] || [ "$target" = "ku-phumpanya-app" ]; then
+    echo "WARN: removing broken symlink $APP_DIR"
+    rm -f "$APP_DIR"
+    return 0
+  fi
+
+  if ! readlink -f "$APP_DIR" >/dev/null 2>&1; then
+    echo "WARN: removing dangling symlink $APP_DIR -> $target"
+    rm -f "$APP_DIR"
+  fi
+}
+
+backup_existing_env() {
+  ENV_BACKUP=""
+  fix_broken_app_symlink
+
+  if [ ! -f "$APP_DIR/.env" ]; then
+    return 0
+  fi
+
+  ENV_BACKUP="$(mktemp)"
+  if ! cp "$APP_DIR/.env" "$ENV_BACKUP" 2>/dev/null; then
+    rm -f "$ENV_BACKUP"
+    ENV_BACKUP=""
+    echo "WARN: could not backup existing .env (skipped)"
+  fi
+}
 
 env_get() {
   local key="$1"
@@ -42,6 +77,13 @@ apply_ku_env_baseline() {
 
   env_set "ELASTICSEARCH_ENABLED" "false"
   env_set "APP_URL" "https://phumpanya.ku.ac.th"
+
+  # Same-domain Next static: FRONTEND_URL defaults to APP_URL (OAuth → /learn/)
+  # Skip overwrite when already set to an external origin (optional Vercel FE).
+  frontend_url="$(env_get FRONTEND_URL)"
+  if [ -z "$frontend_url" ] || [ "$frontend_url" = "http://localhost:3000" ]; then
+    env_set "FRONTEND_URL" "https://phumpanya.ku.ac.th"
+  fi
 
   if ! grep -q '^SANCTUM_STATEFUL_DOMAINS=' "$ENV_FILE" 2>/dev/null; then
     env_set "SANCTUM_STATEFUL_DOMAINS" "phumpanya.ku.ac.th,www.phumpanya.ku.ac.th"
@@ -88,25 +130,18 @@ if [ "$PHP_MAJOR" -lt 8 ] || { [ "$PHP_MAJOR" -eq 8 ] && [ "$PHP_MINOR" -lt 3 ];
 fi
 
 echo "==> extract app to $APP_DIR"
-mkdir -p "$APP_DIR"
-ENV_BACKUP=""
-if [ -f "$HTML_DIR/ku-phumpanya-app/.env" ]; then
-  ENV_BACKUP="$(mktemp)"
-  cp "$HTML_DIR/ku-phumpanya-app/.env" "$ENV_BACKUP"
+backup_existing_env
+mkdir -p "$HTML_DIR"
+if [ -d "$APP_DIR" ] && [ ! -L "$APP_DIR" ]; then
+  rm -rf "$APP_DIR"
 fi
+fix_broken_app_symlink
+mkdir -p "$APP_DIR"
 tar xzf "$TARBALL" -C "$APP_DIR"
 find "$APP_DIR" -name '._*' -delete 2>/dev/null || true
 
-# KU open_basedir: keep app under ~/html/ku-phumpanya-app
-if [ "$APP_DIR" != "$HTML_DIR/ku-phumpanya-app" ] && [ -f "$APP_DIR/artisan" ]; then
-  if [ ! -d "$HTML_DIR/ku-phumpanya-app" ] || [ "$APP_DIR" = "$HOME/ku-phumpanya" ]; then
-    mkdir -p "$HTML_DIR"
-    rm -rf "$HTML_DIR/ku-phumpanya-app"
-    mv "$APP_DIR" "$HTML_DIR/ku-phumpanya-app"
-    APP_DIR="$HTML_DIR/ku-phumpanya-app"
-    ln -sfn "$APP_DIR" "$HOME/ku-phumpanya"
-  fi
-fi
+ln -sfn "$APP_DIR" "$HOME/ku-phumpanya"
+
 ENV_FILE="$APP_DIR/.env"
 if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
   cp "$ENV_BACKUP" "$ENV_FILE"
@@ -142,37 +177,34 @@ if getent group webadmin >/dev/null 2>&1; then
 fi
 mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache
 
-echo "==> web-readable app link (open_basedir)"
-ln -sfn "$APP_DIR" "$HTML_DIR/ku-phumpanya-app" 2>/dev/null || true
-
-echo "==> migrate + seed"
+echo "==> migrate"
 php artisan migrate --force --no-interaction
-php artisan db:seed --force --no-interaction
 
-echo "==> web root $HTML_DIR"
-mkdir -p "$HTML_DIR"
-# backup existing html once
-if [ -d "$HTML_DIR" ] && [ "$(ls -A "$HTML_DIR" 2>/dev/null)" ]; then
-  BACKUP="$HOME/html-backup-$(date +%Y%m%d%H%M%S)"
-  cp -a "$HTML_DIR" "$BACKUP"
-  echo "Backed up html to $BACKUP"
+if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
+  echo "==> seed demo data (SEED_DEMO_DATA=true)"
+  php artisan db:seed --force --no-interaction
+else
+  echo "==> skip db:seed (set SEED_DEMO_DATA=true for first demo bootstrap only)"
 fi
 
-# Copy static assets from public/ (keep custom index.php)
-rsync -a --exclude='index.php' "$APP_DIR/public/" "$HTML_DIR/" 2>/dev/null || {
-  cp -a "$APP_DIR/public/." "$HTML_DIR/"
-  rm -f "$HTML_DIR/index.php"
+echo "==> web root $HTML_DIR/public (KU Apache DOCUMENT_ROOT)"
+PUBLIC_DIR="$HTML_DIR/public"
+mkdir -p "$PUBLIC_DIR"
+
+# Copy static assets from Laravel public/
+rsync -a --exclude='index.php' "$APP_DIR/public/" "$PUBLIC_DIR/" 2>/dev/null || {
+  cp -a "$APP_DIR/public/." "$PUBLIC_DIR/"
+  rm -f "$PUBLIC_DIR/index.php"
 }
 
-# KU entry: index.php — app must be inside html (open_basedir)
-cp "$APP_DIR/deploy/ku-vm/html-index.php" "$HTML_DIR/index.php"
-cp "$APP_DIR/deploy/ku-vm/htaccess.minimal" "$HTML_DIR/.htaccess" 2>/dev/null || true
+cp "$APP_DIR/deploy/ku-vm/public-index.php" "$PUBLIC_DIR/index.php"
+cp "$APP_DIR/deploy/ku-vm/htaccess.minimal" "$PUBLIC_DIR/.htaccess" 2>/dev/null || true
 rm -f "$APP_DIR/.htaccess"
-find "$HTML_DIR" -name '._*' -delete 2>/dev/null || true
+find "$HTML_DIR" "$APP_DIR" -name '._*' -delete 2>/dev/null || true
 
 echo "==> optimize"
 php artisan config:cache
-php artisan route:cache
+php artisan route:clear
 php artisan view:cache
 php artisan filament:optimize 2>/dev/null || true
 

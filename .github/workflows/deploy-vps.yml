@@ -1,0 +1,89 @@
+name: Deploy Laravel to Hostinger VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: phumpanya-vps-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  LARAVEL_IMAGE: ghcr.io/plenglnw1/ku-phumpanya
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer
+          extensions: mbstring, pdo, pdo_sqlite, openssl, tokenizer, xml, fileinfo, curl, zip, intl, bcmath
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Run tests
+        run: php artisan test
+
+  build-and-deploy:
+    name: Build and deploy
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Laravel image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.LARAVEL_IMAGE }}:latest
+            ${{ env.LARAVEL_IMAGE }}:${{ github.sha }}
+
+      - name: Deploy Laravel to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.VPS_APP_DIR || '/opt/phumpanya' }}"
+            if [ -n "${{ secrets.GHCR_PULL_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
+            fi
+            export LARAVEL_IMAGE="${{ env.LARAVEL_IMAGE }}:${{ github.sha }}"
+            ./deploy-service.sh laravel "$LARAVEL_IMAGE"
+            curl -fsS -o /dev/null "https://${{ secrets.APP_HOST || 'plenglnw1.tech' }}/up" || curl -fsS -o /dev/null http://127.0.0.1:18080/up

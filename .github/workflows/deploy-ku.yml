@@ -1,8 +1,7 @@
 name: Deploy to KU VM
 
+# Manual only — Hostinger VPS is the push-to-main production target.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -43,7 +42,6 @@ jobs:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout
