@@ -1,19 +1,30 @@
 # Deploy Phumpanya on Hostinger VPS
 
-Domain: `plenglnw1.tech` / `www.plenglnw1.tech` → `101.44.57.113`
+Domain: `plenglnw1.tech` / `www.plenglnw1.tech` → **`187.127.110.209`**
 
 Stack: Traefik (Hostinger) → Nginx gateway → Next static + Laravel + MySQL 8.4 + Elasticsearch 8.19.1
 
 ## Architecture
 
-- Frontend image: `ghcr.io/chissanupun/ku-bcg-frontend`
-- Search-init image: `ghcr.io/chissanupun/ku-bcg-search-init`
-- Laravel image: `ghcr.io/plenglnw1/ku-phumpanya`
-- Compose: [`docker-compose.yaml`](../docker-compose.yaml) (Hostinger Docker Manager) and [`deploy/hostinger/compose.production.yml`](./compose.production.yml) (server copy under `/opt/phumpanya`)
+- Frontend: `ghcr.io/chissanupun/ku-bcg-frontend`
+- Search-init: `ghcr.io/chissanupun/ku-bcg-search-init`
+- Laravel: `ghcr.io/plenglnw1/ku-phumpanya`
+- Gateway: `ghcr.io/plenglnw1/ku-phumpanya-gateway`
+- Compose: root [`docker-compose.yaml`](../docker-compose.yaml) (Docker Manager) or [`deploy/hostinger/compose.production.yml`](./compose.production.yml) (`/opt/phumpanya`)
 
-Search: Elasticsearch keyword (`multi_match`). `QDRANT_ENABLED=false`. No queue/scheduler containers.
+Search: Elasticsearch keyword only. `QDRANT_ENABLED=false`. No queue/scheduler containers.
 
-## Secrets checklist (Hostinger Environment / `/opt/phumpanya/.env`)
+## What you must do (blocked without these)
+
+| # | Action | Why |
+|---|--------|-----|
+| 1 | Commit + push `ku-phumpanya` gateway/compose fixes to `main` | Builds `ku-phumpanya` + `ku-phumpanya-gateway` images |
+| 2 | Make GHCR package **`ku-phumpanya`** (and **`ku-phumpanya-gateway`**) **Public** — or `docker login` on VPS | Frontend packages already public; Laravel currently **403 private** |
+| 3 | Fill Hostinger project Environment (see secrets table) | Compose refuses empty `DB_PASSWORD` / `MYSQL_ROOT_PASSWORD` |
+| 4 | Google Cloud Console: redirect `https://plenglnw1.tech/auth/google/callback` | OAuth login |
+| 5 | Optional CI: GitHub secrets `VPS_HOST=187.127.110.209`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PULL_*` | Only needed for SSH auto-deploy after push |
+
+## Secrets (Hostinger Environment panel)
 
 Copy from [`.env.production.example`](./.env.production.example):
 
@@ -21,41 +32,25 @@ Copy from [`.env.production.example`](./.env.production.example):
 |----------|-------|
 | `APP_KEY` | `php artisan key:generate --show` |
 | `DB_PASSWORD` / `MYSQL_ROOT_PASSWORD` | Strong unique values |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Redirect: `https://plenglnw1.tech/auth/google/callback` |
-| `FRONTEND_IMAGE` / `LARAVEL_IMAGE` / `SEARCH_INIT_IMAGE` | Prefer SHA tags after CI |
-| `TRAEFIK_ENABLE` | `false` for parallel smoke; `true` after cutover |
-| `SEED_DEMO_DATA` | Keep `false` in production |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Redirect above |
+| `TRAEFIK_ENABLE` | `true` for live domain |
+| `RUN_MIGRATIONS_ON_START` | `true` first Docker Manager boot |
+| `SEED_DEMO_DATA` | Keep `false` |
 
-## GitHub secrets (both repos)
+## First deploy via Docker Manager (recommended)
 
-| Secret | Value |
-|--------|-------|
-| `VPS_HOST` | `101.44.57.113` |
-| `VPS_USER` | deploy user with Docker |
-| `VPS_SSH_KEY` | private key |
-| `VPS_APP_DIR` | `/opt/phumpanya` (optional) |
-| `GHCR_PULL_USER` / `GHCR_PULL_TOKEN` | if GHCR packages private |
-
-## First deploy (parallel, Sala-Panya still up)
-
-1. Reauthenticate Hostinger MCP; list VM + projects; note Sala-Panya project name.
-2. Backup Sala-Panya DB/volumes; **do not delete**.
-3. On VPS:
+1. Snapshot created before cutover (Hostinger MCP / panel).
+2. Stop **sala-panya** (preserve volumes) — frees RAM for ES 2g. Do **not** delete.
+3. After images exist on GHCR, create project `phumpanya`:
+   - Content: `https://github.com/plenglnw1/ku-phumpanya` (uses root `docker-compose.yaml`)
+   - Paste filled Environment from `.env.production.example`
+4. Wait healthy; then run search-init once (SSH or Docker Manager exec):
 
 ```bash
-sudo mkdir -p /opt/phumpanya/backups
-# copy compose.production.yml, gateway.conf, deploy-service.sh, bootstrap-vps.sh, .env
-cd /opt/phumpanya
-cp .env.production.example .env   # fill secrets
-# parallel smoke: TRAEFIK_ENABLE=false and uncomment ports 127.0.0.1:18080:80 in compose
-bash bootstrap-vps.sh
-curl -fsS http://127.0.0.1:18080/up
-curl -fsS http://127.0.0.1:18080/learn/
+docker compose --profile init run --rm search-init
 ```
 
-4. Stop Sala-Panya via Hostinger MCP (`VPS_stopProjectV1`) — preserve volumes.
-5. Set `TRAEFIK_ENABLE=true`, recreate gateway, remove temporary 18080 bind.
-6. Verify:
+5. Verify:
 
 ```bash
 curl -fsSI https://plenglnw1.tech/up
@@ -63,80 +58,29 @@ curl -fsSI https://plenglnw1.tech/learn/
 curl -fsSI https://plenglnw1.tech/admin
 ```
 
-7. Update Google OAuth console redirect URI before login tests.
+## Alternate: SSH bootstrap `/opt/phumpanya`
+
+```bash
+sudo mkdir -p /opt/phumpanya/backups
+# copy compose.production.yml, deploy-service.sh, bootstrap-vps.sh, .env
+cd /opt/phumpanya
+bash bootstrap-vps.sh
+```
 
 ## CI/CD
 
 | Repo | Workflow | Trigger |
 |------|----------|---------|
-| `KU-BCG` | `.github/workflows/deploy-vps.yml` | push `main` |
-| `ku-phumpanya` | `.github/workflows/deploy-vps.yml` | push `main` |
-| `ku-phumpanya` | `.github/workflows/deploy-ku.yml` | **manual only** (KU shared host) |
-
-Each workflow builds immutable `:sha` images to GHCR, SSH-deploys via `deploy-service.sh` (flock + health check + rollback tag).
-
-## Routine deploy
-
-Push to `main` in either repo. Or on VPS:
-
-```bash
-cd /opt/phumpanya
-./deploy-service.sh laravel ghcr.io/plenglnw1/ku-phumpanya:<sha>
-./deploy-service.sh frontend ghcr.io/chissanupun/ku-bcg-frontend:<sha>
-```
+| `KU-BCG` | `deploy-vps.yml` | push `main` |
+| `ku-phumpanya` | `deploy-vps.yml` | push `main` |
+| `ku-phumpanya` | `deploy-ku.yml` | **manual only** |
 
 ## Rollback
 
-```bash
-# App image rollback (deploy-service auto-rolls on health fail)
-./deploy-service.sh laravel ghcr.io/plenglnw1/ku-phumpanya:<previous-sha>
+- Image: `./deploy-service.sh laravel ghcr.io/plenglnw1/ku-phumpanya:<prev-sha>`
+- Full: stop `phumpanya`, start preserved `sala-panya` (if still needed)
 
-# Full site rollback to Sala-Panya
-# Traefik: disable phumpanya labels / stop phumpanya gateway
-# Hostinger MCP: VPS_startProjectV1 for preserved sala-panya project
-```
+## Notes
 
-## Elasticsearch reindex
-
-```bash
-cd /opt/phumpanya
-docker compose --profile init run --rm search-init
-```
-
-Idempotent: create missing indices only; upsert snapshot docs by stable id.
-
-## Backups
-
-- `deploy-service.sh` dumps MySQL to `./backups/` before Laravel recreate
-- Hostinger weekly VPS backup remains second layer
-- Elasticsearch data volume: `elasticsearch_data`
-
-## Hostinger MCP cutover status
-
-Live Hostinger API calls currently return `Unauthenticated` even after `mcp_auth` succeeds. Until MCP works:
-
-1. Use Hostinger panel Docker Manager for list/stop/start projects.
-2. Follow **First deploy** steps above via SSH.
-3. Do **not** delete Sala-Panya — only Stop.
-
-When MCP works again:
-
-```text
-VPS_getVirtualMachinesV1 → note virtualMachineId
-VPS_getProjectListV1 → confirm sala-panya project name
-VPS_getProjectContentsV1 → backup compose
-# parallel deploy phumpanya with TRAEFIK_ENABLE=false
-VPS_stopProjectV1(sala-panya)  # preserve volumes
-# enable Traefik labels on phumpanya; update/start project
-DNS_getDNSRecordsV1(plenglnw1.tech)  # verify A/CNAME
-```
-
-## Verify after cutover
-
-| Check | Expect |
-|-------|--------|
-| `https://plenglnw1.tech/up` | 200 |
-| `https://plenglnw1.tech/learn/` | Next SPA HTML |
-| `https://plenglnw1.tech/admin` | Filament login |
-| Google OAuth | callback on same host |
-| `POST /api/search` | ES keyword results (Qdrant off) |
+- `listen2life.plenglnw1.tech` still points at `101.44.57.113` (unchanged).
+- Sala-Panya was crash-looping; volumes kept on stop.

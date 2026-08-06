@@ -22,14 +22,17 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 
-# Ensure Traefik external network exists (Hostinger usually creates this).
+# Ensure docker is available.
+# Traefik on Hostinger uses network_mode:host + docker provider labels (no shared network required).
 TRAEFIK_NETWORK="$(grep -E '^TRAEFIK_NETWORK=' .env | cut -d= -f2- || true)"
 TRAEFIK_NETWORK="${TRAEFIK_NETWORK:-traefik}"
-if ! docker network inspect "$TRAEFIK_NETWORK" >/dev/null 2>&1; then
-  echo "==> create docker network $TRAEFIK_NETWORK"
-  docker network create "$TRAEFIK_NETWORK" || true
+# legacy: create network only if compose still references it
+if grep -q 'external: true' "$COMPOSE_FILE" 2>/dev/null; then
+  if ! docker network inspect "$TRAEFIK_NETWORK" >/dev/null 2>&1; then
+    echo "==> create docker network $TRAEFIK_NETWORK"
+    docker network create "$TRAEFIK_NETWORK" || true
+  fi
 fi
-
 if [ -n "${GHCR_PULL_TOKEN:-}" ]; then
   echo "==> docker login ghcr.io"
   echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "${GHCR_PULL_USER:-$USER}" --password-stdin

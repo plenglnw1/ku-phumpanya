@@ -37,7 +37,12 @@ if [ -n "${DB_HOST:-}" ] && [ "${DB_CONNECTION:-mysql}" = "mysql" ]; then
   done
 fi
 
-# Migrations run from deploy-service.sh, not every container start.
 php artisan config:clear --no-interaction 2>/dev/null || true
+
+# Optional first-boot migrate (Hostinger Docker Manager). Prefer deploy-service.sh normally.
+if [ "${RUN_MIGRATIONS_ON_START:-false}" = "true" ]; then
+  echo "Running migrations (RUN_MIGRATIONS_ON_START=true)..."
+  php artisan migrate --force --no-interaction
+fi
 
 exec "$@"

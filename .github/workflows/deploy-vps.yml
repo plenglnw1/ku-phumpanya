@@ -16,6 +16,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   LARAVEL_IMAGE: ghcr.io/plenglnw1/ku-phumpanya
+  GATEWAY_IMAGE: ghcr.io/plenglnw1/ku-phumpanya-gateway
 
 jobs:
   test:
@@ -71,6 +72,16 @@ jobs:
             ${{ env.LARAVEL_IMAGE }}:latest
             ${{ env.LARAVEL_IMAGE }}:${{ github.sha }}
 
+      - name: Build and push gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/hostinger
+          file: deploy/hostinger/Dockerfile.gateway
+          push: true
+          tags: |
+            ${{ env.GATEWAY_IMAGE }}:latest
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+
       - name: Deploy Laravel to VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -85,5 +96,7 @@ jobs:
               echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
             fi
             export LARAVEL_IMAGE="${{ env.LARAVEL_IMAGE }}:${{ github.sha }}"
+            export GATEWAY_IMAGE="${{ env.GATEWAY_IMAGE }}:${{ github.sha }}"
             ./deploy-service.sh laravel "$LARAVEL_IMAGE"
+            ./deploy-service.sh gateway "$GATEWAY_IMAGE" || docker compose -f compose.production.yml up -d gateway
             curl -fsS -o /dev/null "https://${{ secrets.APP_HOST || 'plenglnw1.tech' }}/up" || curl -fsS -o /dev/null http://127.0.0.1:18080/up

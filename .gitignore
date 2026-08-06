@@ -33,3 +33,6 @@ api/laravel/
 dist/
 .vercel
 .env*
+!.env.example
+!.env.production.example
+!deploy/hostinger/.env.production.example

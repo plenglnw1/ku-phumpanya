@@ -9,7 +9,7 @@ SERVICE="${1:-}"
 IMAGE_REF="${2:-}"
 
 if [ -z "$SERVICE" ] || [ -z "$IMAGE_REF" ]; then
-  echo "Usage: $0 <frontend|laravel|search-init> <image:tag>"
+  echo "Usage: $0 <frontend|laravel|gateway|search-init> <image:tag>"
   exit 1
 fi
 
@@ -31,6 +31,9 @@ fi
 case "$SERVICE" in
   frontend)
     export FRONTEND_IMAGE="$IMAGE_REF"
+    ;;
+  gateway)
+    export GATEWAY_IMAGE="$IMAGE_REF"
     ;;
   laravel)
     export LARAVEL_IMAGE="$IMAGE_REF"
@@ -56,6 +59,7 @@ rollback() {
     echo "==> rollback $SERVICE → $PREV_IMAGE"
     case "$SERVICE" in
       frontend) export FRONTEND_IMAGE="$PREV_IMAGE" ;;
+      gateway) export GATEWAY_IMAGE="$PREV_IMAGE" ;;
       laravel) export LARAVEL_IMAGE="$PREV_IMAGE" ;;
       search-init) export SEARCH_INIT_IMAGE="$PREV_IMAGE" ;;
     esac
