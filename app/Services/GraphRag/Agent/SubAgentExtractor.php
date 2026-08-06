@@ -78,10 +78,31 @@ final class SubAgentExtractor
         return [
             'key_points' => collect($docs)->take(3)->map(fn (array $d): string => (string) ($d['title'] ?? ''))->filter()->values()->all(),
             'entities' => collect($relations)->flatMap(fn (array $r): array => [$r['subject'] ?? '', $r['object'] ?? ''])->filter()->unique()->take(8)->values()->all(),
-            'courses' => collect($docs)->filter(fn (array $d): bool => ($d['source'] ?? '') === 'KU_MOOC')->take(2)->map(fn (array $d): array => [
+            'courses' => $this->fallbackCourses($docs),
+        ];
+    }
+
+    /**
+     * KU MOOC entries are the only true courses, but the corpus holds 6 of them
+     * across 612 documents — most queries retrieve none. Filtering on MOOC alone
+     * therefore yielded an empty learning path. Rank MOOC first, then top up with
+     * the highest-scoring retrieved documents so the phase always has content.
+     *
+     * @param  list<array<string, mixed>>  $docs
+     * @return list<array<string, string>>
+     */
+    private function fallbackCourses(array $docs): array
+    {
+        $isMooc = fn (array $d): bool => ($d['source'] ?? '') === 'KU_MOOC';
+
+        return collect($docs)->filter($isMooc)
+            ->concat(collect($docs)->reject($isMooc))
+            ->take(4)
+            ->map(fn (array $d): array => [
                 'title' => (string) ($d['title'] ?? 'Course'),
                 'url' => (string) ($d['url'] ?? ''),
-            ])->values()->all(),
-        ];
+            ])
+            ->values()
+            ->all();
     }
 }

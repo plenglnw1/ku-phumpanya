@@ -5,36 +5,22 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\PhumpanyaMockCatalog;
+use App\Services\Recommendations\SmartPicksService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 final class SmartPicksController extends Controller
 {
     public function __construct(
-        private readonly PhumpanyaMockCatalog $catalog,
+        private readonly SmartPicksService $smartPicks,
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $data = $this->catalog->smartPicks();
-        $picks = $data['picks'] ?? [];
-
-        $items = collect($picks)->map(function (array $pick): array {
-            $tags = $pick['tags'] ?? [];
-
-            return [
-                'title' => (string) ($pick['title'] ?? ''),
-                'description' => (string) ($pick['meta'] ?? implode(' · ', $tags)),
-                'query' => (string) ($pick['title'] ?? ''),
-                'badge' => ! empty($tags) ? (string) $tags[0] : (($pick['featured'] ?? false) ? 'Featured' : ''),
-            ];
-        })->values()->all();
-
+        // Envelope kept as documented in docs/api-spec.md; `items` gained the fields
+        // the recommender produces (reasons, match, keywords) additively.
         return response()->json([
-            'smart_picks' => [
-                'headline' => 'AI Recommendations',
-                'items' => $items,
-            ],
+            'smart_picks' => $this->smartPicks->forUser($request->user()),
         ]);
     }
 }

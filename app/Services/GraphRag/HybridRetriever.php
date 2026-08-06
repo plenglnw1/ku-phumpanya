@@ -42,7 +42,20 @@ final class HybridRetriever
                     'query' => [
                         'multi_match' => [
                             'query' => $query,
-                            'fields' => ['title^3', 'content^2', 'topic', 'faculty_tags', 'bcg_tags'],
+                            // Must match the ku_bcg_documents mapping. `content`, `topic`,
+                            // `faculty_tags` and `bcg_tags` are the normalized names used
+                            // downstream by RetrievalLinker — they do not exist in the index,
+                            // so querying them matched nothing. `bcg_pillars`/`faculties`/
+                            // `search_keyword` are keyword-typed and excluded on purpose:
+                            // they only match exact tokens, never free text.
+                            'fields' => [
+                                'title^3',
+                                'title_en^2',
+                                'keywords^2',
+                                'topic_names_th',
+                                'topic_names_en',
+                                'abstract',
+                            ],
                             'type' => 'best_fields',
                         ],
                     ],
@@ -50,6 +63,53 @@ final class HybridRetriever
             ])->asArray();
         } catch (\Throwable) {
             return $this->fallbackRetrieve($query, $size);
+        }
+
+        return array_map(
+            static fn (array $hit): array => array_merge(['_score' => $hit['_score'] ?? 0.0], $hit['_source'] ?? []),
+            $response['hits']['hits'] ?? [],
+        );
+    }
+
+    /**
+     * Relation triples for the knowledge graph, from the `ku_bcg_relations` index.
+     *
+     * Without this the graph falls back to `graphrag_seed`, which only links a topic
+     * to its faculties and courses — a star with no traversable paths. The index
+     * holds the real cross-source triples (mitigatesCarbonVia, pollutesVia, …).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function retrieveRelations(string $query, int $size = 24): array
+    {
+        $client = $this->factory->make();
+        if (! $client instanceof Client) {
+            return [];
+        }
+
+        try {
+            $response = $client->search([
+                'index' => config('elasticsearch.indices.relations'),
+                'body' => [
+                    'size' => $size,
+                    'query' => [
+                        'bool' => [
+                            'should' => [
+                                ['multi_match' => [
+                                    'query' => $query,
+                                    'fields' => ['subject^2', 'object^2', 'predicate'],
+                                    'type' => 'best_fields',
+                                ]],
+                                // Relations are few and globally meaningful, so a query that
+                                // matches none still yields the graph rather than nothing.
+                                ['match_all' => (object) []],
+                            ],
+                        ],
+                    ],
+                ],
+            ])->asArray();
+        } catch (\Throwable) {
+            return [];
         }
 
         return array_map(
