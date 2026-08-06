@@ -161,6 +161,14 @@ final class Synthesizer
                         'keywords' => collect((array) ($d['keywords'] ?? []))
                             ->map(fn (mixed $k): string => trim((string) $k))
                             ->filter()->take(8)->values()->all(),
+                        // KU Forest publishes no abstract, so these Thai project
+                        // details are all the detail page has to show for those
+                        // documents. Empty on sources that do not carry them.
+                        'category' => (string) ($d['category'] ?? ''),
+                        'project_nature' => (string) ($d['project_nature'] ?? ''),
+                        'budget_year' => (string) ($d['budget_year'] ?? ''),
+                        'funding' => (string) ($d['funding'] ?? ''),
+                        'department' => (string) ($d['department'] ?? ''),
                     ])->values()->all(),
                 ];
             })

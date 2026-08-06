@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LearningController;
+use App\Http\Controllers\Api\LearningProgressController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\SearchController;
@@ -25,8 +26,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['verified', 'profile.complete'])->group(function () {
         Route::post('/search', [SearchController::class, 'store']);
         Route::get('/search/recent', [SearchController::class, 'recent']);
+        Route::delete('/search/recent', [SearchController::class, 'clear']);
         Route::get('/search/suggestions', [SearchController::class, 'suggestions']);
         Route::get('/search/history/{searchHistory}', [SearchController::class, 'show']);
+        Route::get('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'show']);
+        Route::put('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'update']);
 
         Route::get('/learning', [LearningController::class, 'show']);
         Route::get('/smart-picks', [SmartPicksController::class, 'index']);

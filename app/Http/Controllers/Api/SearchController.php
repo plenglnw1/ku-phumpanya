@@ -71,6 +71,25 @@ final class SearchController extends Controller
         return SearchHistoryRecentResource::collection($histories);
     }
 
+    /**
+     * Clears the signed-in user's whole search history.
+     *
+     * Scoped to `user_id`, so one account can never reach another's rows. The
+     * delete cascades to `learning_progress`, which is keyed on the history row —
+     * clearing the history therefore also clears the completion ticks recorded
+     * against those roadmaps, and empties the behavioural signal Smart Picks
+     * reads. That is what "clear my history" should mean, but it cannot be
+     * undone, so the sidebar confirms before calling this.
+     */
+    public function clear(Request $request): JsonResponse
+    {
+        $deleted = SearchHistory::query()
+            ->where('user_id', $request->user()->id)
+            ->delete();
+
+        return response()->json(['deleted' => $deleted]);
+    }
+
     public function suggestions(): JsonResponse
     {
         return response()->json([
