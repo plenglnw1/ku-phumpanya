@@ -31,15 +31,23 @@ final class AgentPipeline
     {
         $this->gemini->resetCallCount();
 
+        $retrievalStart = microtime(true);
         $context = $this->linker->link($query);
+        $retrievalMs = (int) round((microtime(true) - $retrievalStart) * 1000);
+
         $route = $this->router->route($context);
         $tier = $route['tier'];
 
+        $synthesisStart = microtime(true);
         $result = match ($tier) {
             'intermediate' => $this->intermediate->generate($context),
             'advanced' => $this->advanced->generate($context),
             default => $this->basic->generate($context),
         };
+        $synthesisMs = (int) round((microtime(true) - $synthesisStart) * 1000);
+
+        $subQueries = $result['_sub_queries'] ?? [];
+        unset($result['_sub_queries']);
 
         return array_merge($result, [
             'tier' => $tier,
@@ -49,6 +57,11 @@ final class AgentPipeline
                 'models' => config('gemini.models'),
                 'docs_retrieved' => count($context['docs']),
                 'relations_retrieved' => count($context['relations']),
+                'sub_queries' => $subQueries,
+                'timing' => [
+                    'retrieval_ms' => $retrievalMs,
+                    'synthesis_ms' => $synthesisMs,
+                ],
             ],
         ]);
     }

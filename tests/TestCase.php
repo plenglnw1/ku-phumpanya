@@ -11,7 +11,8 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
-        config()->set('auth_flow.password_enabled', true);
+        config()->set('auth_flow.password_login_enabled', true);
+        config()->set('auth_flow.password_register_enabled', true);
     }
 
     protected function frontendRedirect(string $path): string

@@ -15,12 +15,12 @@ class AuthenticationTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('auth_flow.password_enabled', true);
+        config()->set('auth_flow.password_login_enabled', true);
     }
 
     public function test_login_screen_redirects_when_password_auth_disabled(): void
     {
-        config()->set('auth_flow.password_enabled', false);
+        config()->set('auth_flow.password_login_enabled', false);
 
         $response = $this->get('/login');
 

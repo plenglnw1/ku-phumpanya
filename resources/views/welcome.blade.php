@@ -27,7 +27,7 @@
             </p>
         </div>
 
-        @if (config('auth_flow.password_enabled'))
+        @if (config('auth_flow.password_login_enabled'))
             <div class="flex items-center justify-between border-t border-gray-100 pt-6 text-sm">
                 <a href="{{ route('login') }}" class="font-medium text-phumpanya-900 hover:underline">
                     Dev / admin password login

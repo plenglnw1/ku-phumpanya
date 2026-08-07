@@ -22,7 +22,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View|RedirectResponse
     {
-        if (! config('auth_flow.password_enabled')) {
+        if (! config('auth_flow.password_login_enabled')) {
             return redirect()->route('welcome');
         }
 
@@ -34,7 +34,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        if (! config('auth_flow.password_enabled')) {
+        if (! config('auth_flow.password_login_enabled')) {
             return redirect()->route('welcome');
         }
         $request->authenticate();

@@ -37,11 +37,15 @@ final class GraphRagService
     }
 
     /**
-     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>}
+     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>, _meta: array<string, mixed>}
      */
     private function legacySearch(string $query): array
     {
+        $retrievalStart = microtime(true);
         $documents = $this->retriever->retrieve($query, 6);
+        $retrievalMs = (int) round((microtime(true) - $retrievalStart) * 1000);
+
+        $synthesisStart = microtime(true);
         $topDocument = $documents[0] ?? [];
         $title = (string) ($topDocument['title'] ?? Str::title($query));
 
@@ -64,6 +68,7 @@ final class GraphRagService
         $paths = $this->pathwayRanker->rank($tokens, $bcgTags, $facultyTags, 3);
 
         $content = (string) ($topDocument['content'] ?? $topDocument['abstract'] ?? 'No contextual summary found.');
+        $synthesisMs = (int) round((microtime(true) - $synthesisStart) * 1000);
 
         return [
             'title' => $title,
@@ -76,6 +81,15 @@ final class GraphRagService
             'knowledge_graph' => $graph,
             'learning_path' => $this->toLearningPath($paths),
             'evidence' => $this->toEvidence($documents),
+            '_meta' => [
+                'docs_retrieved' => count($documents),
+                'relations_retrieved' => 0,
+                'sub_queries' => [],
+                'timing' => [
+                    'retrieval_ms' => $retrievalMs,
+                    'synthesis_ms' => $synthesisMs,
+                ],
+            ],
         ];
     }
 

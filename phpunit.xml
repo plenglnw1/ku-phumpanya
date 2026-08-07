@@ -19,7 +19,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
-        <env name="AUTH_PASSWORD_ENABLED" value="true"/>
+        <env name="AUTH_PASSWORD_LOGIN_ENABLED" value="true"/>
+        <env name="AUTH_PASSWORD_REGISTER_ENABLED" value="true"/>
         <env name="FRONTEND_URL" value="http://localhost"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

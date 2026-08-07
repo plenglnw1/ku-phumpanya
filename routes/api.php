@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\Admin\AnalyticsController;
+use App\Http\Controllers\Api\Admin\DashboardStatsController;
+use App\Http\Controllers\Api\Admin\SearchLogController;
+use App\Http\Controllers\Api\Admin\UserManagementController;
+use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LearningProgressController;
@@ -15,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/reference/faculties', [ReferenceController::class, 'faculties']);
 Route::get('/reference/roles', [ReferenceController::class, 'roles']);
 
+Route::post('/auth/login', [SessionController::class, 'login']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -22,6 +29,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/auth/register/complete', [AuthController::class, 'completeRegistration']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::middleware(['admin'])->prefix('admin')->group(function () {
+        Route::get('/stats', [DashboardStatsController::class, 'index']);
+        Route::get('/analytics', [AnalyticsController::class, 'index']);
+        Route::get('/search-logs/export', [SearchLogController::class, 'export']);
+        Route::get('/search-logs', [SearchLogController::class, 'index']);
+        Route::post('/users', [UserManagementController::class, 'store']);
+    });
 
     Route::middleware(['verified', 'profile.complete'])->group(function () {
         Route::post('/search', [SearchController::class, 'store']);

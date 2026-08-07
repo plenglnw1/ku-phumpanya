@@ -19,7 +19,7 @@ class RegisteredUserController extends Controller
 {
     public function create(): View|RedirectResponse
     {
-        if (! config('auth_flow.password_enabled')) {
+        if (! config('auth_flow.password_register_enabled')) {
             return redirect()->route('welcome');
         }
 
@@ -31,7 +31,7 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        if (! config('auth_flow.password_enabled')) {
+        if (! config('auth_flow.password_register_enabled')) {
             return redirect()->route('welcome');
         }
 

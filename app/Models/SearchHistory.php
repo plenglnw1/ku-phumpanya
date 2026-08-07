@@ -13,6 +13,15 @@ class SearchHistory extends Model
         'user_id',
         'query',
         'result',
+        'status',
+        'query_type',
+        'role_snapshot',
+        'faculty_snapshot',
+        'total_latency_ms',
+        'retrieval_latency_ms',
+        'synthesis_latency_ms',
+        'total_nodes_found',
+        'metrics',
     ];
 
     /**
@@ -22,6 +31,7 @@ class SearchHistory extends Model
     {
         return [
             'result' => 'array',
+            'metrics' => 'array',
         ];
     }
 

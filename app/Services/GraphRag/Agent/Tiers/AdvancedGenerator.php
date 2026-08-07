@@ -8,7 +8,6 @@ use App\Services\GraphRag\Agent\ResultFormatter;
 use App\Services\GraphRag\Agent\SubAgentExtractor;
 use App\Services\GraphRag\Agent\Synthesizer;
 use App\Services\GraphRag\RelationGraphBuilder;
-use Illuminate\Support\Str;
 
 /** G_A — Advanced: fan-out sub-agents per topic + full graph + synthesizer. */
 final class AdvancedGenerator
@@ -26,6 +25,7 @@ final class AdvancedGenerator
     public function generate(array $context): array
     {
         $topicGroups = $this->groupDocsByTopic($context['docs']);
+        $subQueries = [];
         $merged = [
             'key_points' => [],
             'entities' => [],
@@ -33,11 +33,13 @@ final class AdvancedGenerator
         ];
 
         foreach ($topicGroups as $topicId => $docs) {
+            $focus = "topic {$topicId}";
+            $subQueries[] = $focus;
             $slice = $this->extractor->extract(
                 $context['query'],
                 $docs,
                 $context['relations'],
-                "topic {$topicId}",
+                $focus,
             );
             $merged['key_points'] = array_merge($merged['key_points'], $slice['key_points']);
             $merged['entities'] = array_merge($merged['entities'], $slice['entities']);
@@ -77,6 +79,7 @@ final class AdvancedGenerator
             'knowledge_graph' => $graph,
             'learning_path' => ResultFormatter::normalizeLearningPath($synth['learning_path']),
             'evidence' => ResultFormatter::toEvidence($context['docs']),
+            '_sub_queries' => $subQueries,
         ];
     }
 

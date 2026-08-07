@@ -2,8 +2,8 @@
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900">Sign in</h1>
         <p class="mt-2 text-sm text-gray-600">
-            @if (config('auth_flow.password_enabled'))
-                Use Google or your dev credentials below.
+            @if (config('auth_flow.password_login_enabled'))
+                Use Google or your email/password credentials below.
             @else
                 Sign in with your Google account.
             @endif
@@ -25,7 +25,7 @@
         Sign in with Google
     </a>
 
-    @if (config('auth_flow.password_enabled'))
+    @if (config('auth_flow.password_login_enabled'))
         <div class="relative mb-6">
             <div class="absolute inset-0 flex items-center">
                 <div class="w-full border-t border-gray-200"></div>
