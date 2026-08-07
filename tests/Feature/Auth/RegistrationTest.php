@@ -39,7 +39,7 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect($this->frontendRedirect('/learn/'));
+        $response->assertRedirect($this->frontendRedirect('/'));
     }
 
     public function test_public_register_is_blocked_when_password_auth_disabled(): void

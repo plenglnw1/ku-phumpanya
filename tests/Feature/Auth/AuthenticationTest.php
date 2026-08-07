@@ -46,7 +46,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect($this->frontendRedirect('/learn/'));
+        $response->assertRedirect($this->frontendRedirect('/'));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

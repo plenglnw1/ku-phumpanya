@@ -24,7 +24,7 @@ class CompleteRegistrationTest extends TestCase
             'student_id' => '6410000001',
         ]);
 
-        $response->assertRedirect($this->frontendRedirect('/learn/'));
+        $response->assertRedirect($this->frontendRedirect('/'));
 
         $user->refresh();
         $this->assertSame(UserRole::Student, $user->role);
@@ -44,7 +44,7 @@ class CompleteRegistrationTest extends TestCase
             'research_affiliation' => 'ศูนย์วิจัย BCG',
         ]);
 
-        $response->assertRedirect($this->frontendRedirect('/learn/'));
+        $response->assertRedirect($this->frontendRedirect('/'));
 
         $user->refresh();
         $this->assertSame(UserRole::Researcher, $user->role);

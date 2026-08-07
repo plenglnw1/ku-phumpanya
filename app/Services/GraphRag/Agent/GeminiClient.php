@@ -85,13 +85,32 @@ final class GeminiClient
             return null;
         }
 
+        $finishReason = $response->json('candidates.0.finishReason');
+
         $text = $response->json('candidates.0.content.parts.0.text');
         if (! is_string($text) || $text === '') {
+            Log::warning('GeminiClient: empty candidate text', [
+                'model' => $model,
+                'finish_reason' => $finishReason,
+            ]);
+
             return null;
         }
 
         $decoded = json_decode($text, true);
+        if (! is_array($decoded)) {
+            // MAX_TOKENS truncates mid-JSON: thinking tokens count against
+            // maxOutputTokens, so a long reasoning pass starves the answer.
+            Log::warning('GeminiClient: undecodable JSON', [
+                'model' => $model,
+                'finish_reason' => $finishReason,
+                'text_length' => strlen($text),
+                'json_error' => json_last_error_msg(),
+            ]);
 
-        return is_array($decoded) ? $decoded : null;
+            return null;
+        }
+
+        return $decoded;
     }
 }
