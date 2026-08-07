@@ -15,6 +15,6 @@ final class RedirectAfterLogin
         // Next.js owns /admin/ (product dashboard). Filament lives at /filament.
         return $user->isAdmin()
             ? $frontend.'/admin/'
-            : $frontend.'/learn/';
+            : $frontend.'/';
     }
 }
