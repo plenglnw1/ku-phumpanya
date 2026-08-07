@@ -88,22 +88,19 @@ final class HybridRetriever
         }
 
         try {
+            // Do NOT fall back to match_all — that always returned the same ~19 baked
+            // triples (Biomass/Chitosan/Agroforestry…), so every search showed identical
+            // graph nodes. Prefer query-matched relations only; empty is OK — the graph
+            // builder still renders nodes from retrieved doc titles/keywords.
             $response = $client->search([
                 'index' => config('elasticsearch.indices.relations'),
                 'body' => [
                     'size' => $size,
                     'query' => [
-                        'bool' => [
-                            'should' => [
-                                ['multi_match' => [
-                                    'query' => $query,
-                                    'fields' => ['subject^2', 'object^2', 'predicate'],
-                                    'type' => 'best_fields',
-                                ]],
-                                // Relations are few and globally meaningful, so a query that
-                                // matches none still yields the graph rather than nothing.
-                                ['match_all' => (object) []],
-                            ],
+                        'multi_match' => [
+                            'query' => $query,
+                            'fields' => ['subject^2', 'object^2', 'predicate'],
+                            'type' => 'best_fields',
                         ],
                     ],
                 ],
