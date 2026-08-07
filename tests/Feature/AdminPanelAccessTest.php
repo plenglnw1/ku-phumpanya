@@ -13,7 +13,7 @@ class AdminPanelAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_user_is_redirected_to_filament_after_login(): void
+    public function test_admin_user_is_redirected_to_frontend_admin_after_login(): void
     {
         $admin = User::factory()->create([
             'role' => UserRole::Admin,
@@ -24,17 +24,17 @@ class AdminPanelAccessTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect('/admin');
+        $response->assertRedirect($this->frontendRedirect('/admin/'));
     }
 
-    public function test_non_admin_can_access_search_instead_of_admin(): void
+    public function test_non_admin_cannot_access_filament_panel(): void
     {
         $student = User::factory()->create([
             'role' => UserRole::Student,
         ]);
 
         $this->actingAs($student)
-            ->get('/admin')
+            ->get('/filament')
             ->assertForbidden();
 
         $this->actingAs($student)
@@ -49,7 +49,7 @@ class AdminPanelAccessTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get('/admin')
+            ->get('/filament')
             ->assertOk();
     }
 }

@@ -10,8 +10,11 @@ final class RedirectAfterLogin
 {
     public static function for(User $user): string
     {
+        $frontend = rtrim((string) config('app.frontend_url'), '/');
+
+        // Next.js owns /admin/ (product dashboard). Filament lives at /filament.
         return $user->isAdmin()
-            ? url('/admin')
-            : rtrim((string) config('app.frontend_url'), '/').'/learn/';
+            ? $frontend.'/admin/'
+            : $frontend.'/learn/';
     }
 }

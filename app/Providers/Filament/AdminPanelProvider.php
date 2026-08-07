@@ -27,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('filament')
             ->brandName('Phumpanya')
             ->colors([
                 'primary' => Color::hex('#2D5A43'),
