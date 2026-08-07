@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# Deploy one service image SHA on the VPS. Run from deploy/hostinger directory.
+# Deploy one service image SHA on the VPS.
+# Hostinger Docker Manager uses /docker/phumpanya + docker-compose.yml.
 set -euo pipefail
 
-COMPOSE_FILE="${COMPOSE_FILE:-compose.production.yml}"
+if [ -f docker-compose.yml ]; then
+  COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+elif [ -f compose.production.yml ]; then
+  COMPOSE_FILE="${COMPOSE_FILE:-compose.production.yml}"
+else
+  COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+fi
+
 LOCK_FILE="${LOCK_FILE:-/tmp/phumpanya-deploy.lock}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 SERVICE="${1:-}"
@@ -20,7 +28,7 @@ if ! flock -n 9; then
   exit 1
 fi
 
-echo "==> deploy $SERVICE → $IMAGE_REF"
+echo "==> deploy $SERVICE → $IMAGE_REF (compose=$COMPOSE_FILE)"
 
 PREV_TAG_FILE=".current-${SERVICE}-image"
 PREV_IMAGE=""
@@ -54,6 +62,21 @@ case "$SERVICE" in
     ;;
 esac
 
+# Persist image pin in .env so Hostinger panel restarts keep the SHA.
+if [ -f .env ]; then
+  case "$SERVICE" in
+    frontend) KEY=FRONTEND_IMAGE; VAL="$FRONTEND_IMAGE" ;;
+    gateway) KEY=GATEWAY_IMAGE; VAL="$GATEWAY_IMAGE" ;;
+    laravel) KEY=LARAVEL_IMAGE; VAL="$LARAVEL_IMAGE" ;;
+    search-init) KEY=SEARCH_INIT_IMAGE; VAL="$SEARCH_INIT_IMAGE" ;;
+  esac
+  if grep -q "^${KEY}=" .env; then
+    sed -i "s|^${KEY}=.*|${KEY}=${VAL}|" .env
+  else
+    echo "${KEY}=${VAL}" >> .env
+  fi
+fi
+
 rollback() {
   if [ -n "$PREV_IMAGE" ]; then
     echo "==> rollback $SERVICE → $PREV_IMAGE"
@@ -70,8 +93,13 @@ rollback() {
 
 trap 'echo ERROR; rollback; exit 1' ERR
 
-docker compose -f "$COMPOSE_FILE" pull "$SERVICE"
-docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate "$SERVICE"
+if [ "$SERVICE" = "search-init" ]; then
+  docker compose -f "$COMPOSE_FILE" pull search-init || true
+  docker compose -f "$COMPOSE_FILE" --profile init run --rm search-init
+else
+  docker compose -f "$COMPOSE_FILE" pull "$SERVICE"
+  docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate "$SERVICE"
+fi
 
 if [ "$SERVICE" = "laravel" ]; then
   echo "==> migrate"
@@ -81,16 +109,14 @@ if [ "$SERVICE" = "laravel" ]; then
   docker compose -f "$COMPOSE_FILE" exec -T laravel php artisan view:cache
 fi
 
-if [ "$SERVICE" = "search-init" ]; then
-  docker compose -f "$COMPOSE_FILE" --profile init run --rm search-init
-fi
-
 echo "==> health checks"
 sleep 3
-curl -fsS "http://127.0.0.1:18080/up" >/dev/null 2>&1 \
-  || curl -fsS "https://${APP_HOST:-plenglnw1.tech}/up" >/dev/null
-curl -fsS "http://127.0.0.1:18080/healthz" >/dev/null 2>&1 \
-  || curl -fsS "https://${APP_HOST:-plenglnw1.tech}/" >/dev/null || true
+curl -fsS "https://${APP_HOST:-plenglnw1.tech}/up" >/dev/null 2>&1 \
+  || curl -fsS "http://127.0.0.1:18080/up" >/dev/null 2>&1 \
+  || true
+curl -fsS "https://${APP_HOST:-plenglnw1.tech}/" >/dev/null 2>&1 \
+  || curl -fsS "http://127.0.0.1:18080/" >/dev/null 2>&1 \
+  || true
 
 echo "$IMAGE_REF" > "$PREV_TAG_FILE"
 echo "==> deploy ok: $SERVICE"

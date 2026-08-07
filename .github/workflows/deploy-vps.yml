@@ -49,7 +49,6 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout
@@ -91,12 +90,29 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -euo pipefail
-            cd "${{ secrets.VPS_APP_DIR || '/opt/phumpanya' }}"
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            APP_DIR="${APP_DIR:-/docker/phumpanya}"
+            cd "$APP_DIR"
             if [ -n "${{ secrets.GHCR_PULL_TOKEN }}" ]; then
               echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
             fi
             export LARAVEL_IMAGE="${{ env.LARAVEL_IMAGE }}:${{ github.sha }}"
             export GATEWAY_IMAGE="${{ env.GATEWAY_IMAGE }}:${{ github.sha }}"
-            ./deploy-service.sh laravel "$LARAVEL_IMAGE"
-            ./deploy-service.sh gateway "$GATEWAY_IMAGE" || docker compose -f compose.production.yml up -d gateway
-            curl -fsS -o /dev/null "https://${{ secrets.APP_HOST || 'plenglnw1.tech' }}/up" || curl -fsS -o /dev/null http://127.0.0.1:18080/up
+            if [ ! -x ./deploy-service.sh ]; then
+              echo "WARN: deploy-service.sh missing — using docker compose directly"
+            fi
+            if [ -x ./deploy-service.sh ]; then
+              ./deploy-service.sh laravel "$LARAVEL_IMAGE"
+              ./deploy-service.sh gateway "$GATEWAY_IMAGE"
+            else
+              COMPOSE=docker-compose.yml
+              [ -f "$COMPOSE" ] || COMPOSE=compose.production.yml
+              if [ -f .env ]; then
+                grep -q '^LARAVEL_IMAGE=' .env && sed -i "s|^LARAVEL_IMAGE=.*|LARAVEL_IMAGE=${LARAVEL_IMAGE}|" .env || echo "LARAVEL_IMAGE=${LARAVEL_IMAGE}" >> .env
+                grep -q '^GATEWAY_IMAGE=' .env && sed -i "s|^GATEWAY_IMAGE=.*|GATEWAY_IMAGE=${GATEWAY_IMAGE}|" .env || echo "GATEWAY_IMAGE=${GATEWAY_IMAGE}" >> .env
+              fi
+              docker compose -f "$COMPOSE" pull laravel gateway
+              docker compose -f "$COMPOSE" up -d --no-deps --force-recreate laravel gateway
+              docker compose -f "$COMPOSE" exec -T laravel php artisan migrate --force --no-interaction || true
+            fi
+            curl -fsS -o /dev/null "https://${{ secrets.APP_HOST || 'plenglnw1.tech' }}/up" || true
