@@ -71,7 +71,7 @@ push main → php artisan test → build tarball → SCP → SSH ku-vm-remote-se
 | Secret | Example | Purpose |
 |--------|---------|---------|
 | `KU_SSH_KEY` | private key PEM | SSH auth to KU server |
-| `KU_MYSQL_PASSWORD` | from KU MySQL panel | remote `.env` DB password |
+| `KU_MYSQL_PASSWORD` | from KU MySQL panel | remote `.env` DB password (optional after first successful deploy if server `.env` already has it) |
 
 ### GitHub secrets (optional)
 
@@ -79,6 +79,8 @@ push main → php artisan test → build tarball → SCP → SSH ku-vm-remote-se
 |--------------|---------|---------|
 | `KU_SSH_HOST` | `ppyku@phumpanya.ku.ac.th` | SSH user@host |
 | `KU_DEPLOY_MODE` (repo variable) | unset | `demo` = force AI off; `ske` = leave Qdrant/Gemini env |
+| `KU_FRONTEND_URL` | `https://phumpanya.ku.ac.th` | override only if KU Laravel should redirect users to another frontend origin |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | keep KU OAuth env in sync during CI deploy |
 
 Setup SSH key once on server:
 
@@ -116,7 +118,7 @@ bash scripts/build-ku-deploy.sh dist/ku-phumpanya-deploy.tgz
 ```bash
 ssh ppyku@phumpanya.ku.ac.th
 
-export KU_MYSQL_PASSWORD='your-mysql-password'
+export KU_MYSQL_PASSWORD='your-mysql-password'   # optional after first deploy if .env already has DB_PASSWORD
 bash ~/ku-vm-remote-setup.sh
 ```
 

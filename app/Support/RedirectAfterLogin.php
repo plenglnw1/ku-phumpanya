@@ -11,10 +11,11 @@ final class RedirectAfterLogin
     public static function for(User $user): string
     {
         $frontend = rtrim((string) config('app.frontend_url'), '/');
+        $backend = rtrim((string) config('app.url'), '/');
 
-        // Next.js owns /admin/ (product dashboard). Filament lives at /filament.
+        // Admin always lives on the Laravel host, even when the public frontend is elsewhere.
         return $user->isAdmin()
-            ? $frontend.'/admin/'
+            ? $backend.'/filament'
             : $frontend.'/';
     }
 }

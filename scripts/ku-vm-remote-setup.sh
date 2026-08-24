@@ -73,17 +73,24 @@ env_set() {
 
 apply_ku_env_baseline() {
   local deploy_mode="${KU_DEPLOY_MODE:-}"
+  local frontend_url_target
   local qdrant_host qdrant_key qdrant_embed gemini_key
 
   env_set "ELASTICSEARCH_ENABLED" "false"
   env_set "APP_URL" "https://phumpanya.ku.ac.th"
+  env_set "GOOGLE_REDIRECT_URI" "${GOOGLE_REDIRECT_URI:-https://phumpanya.ku.ac.th/auth/google/callback}"
 
-  # Same-domain Next static: FRONTEND_URL defaults to APP_URL (OAuth → /learn/)
-  # Skip overwrite when already set to an external origin (optional Vercel FE).
-  frontend_url="$(env_get FRONTEND_URL)"
-  if [ -z "$frontend_url" ] || [ "$frontend_url" = "http://localhost:3000" ]; then
-    env_set "FRONTEND_URL" "https://phumpanya.ku.ac.th"
+  if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+    env_set "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
   fi
+
+  if [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+    env_set "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET"
+  fi
+
+  # Same-domain Next static is the KU default; set KU_FRONTEND_URL only when intentionally using another origin.
+  frontend_url_target="${KU_FRONTEND_URL:-https://phumpanya.ku.ac.th}"
+  env_set "FRONTEND_URL" "$frontend_url_target"
 
   if ! grep -q '^SANCTUM_STATEFUL_DOMAINS=' "$ENV_FILE" 2>/dev/null; then
     env_set "SANCTUM_STATEFUL_DOMAINS" "phumpanya.ku.ac.th,www.phumpanya.ku.ac.th"
@@ -154,8 +161,13 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 if [ -z "${KU_MYSQL_PASSWORD:-}" ]; then
-  echo "ERROR: set KU_MYSQL_PASSWORD before running this script"
-  exit 1
+  KU_MYSQL_PASSWORD="$(env_get DB_PASSWORD)"
+  if [ -z "$KU_MYSQL_PASSWORD" ]; then
+    echo "ERROR: set KU_MYSQL_PASSWORD before running this script"
+    exit 1
+  fi
+
+  echo "INFO: KU_MYSQL_PASSWORD not provided; reusing DB_PASSWORD from existing .env"
 fi
 
 if ! grep -q '^APP_KEY=base64:' "$ENV_FILE" 2>/dev/null; then

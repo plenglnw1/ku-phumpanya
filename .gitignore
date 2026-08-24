@@ -20,6 +20,26 @@
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+# Next.js static export artifacts (built by build-ku-deploy.sh — do not commit)
+/public/_next/
+/public/_not-found/
+/public/__next.*
+/public/index.html
+/public/index.txt
+/public/404.html
+/public/404/
+/public/learn/
+/public/login/
+/public/register/
+/public/smart-picks/
+/public/topic/
+/public/fonts/*.woff2
+/public/hero-laptop.png
+/public/laptop.png
+/public/laptop-3d.png
+/public/ku-bcg.png
+/public/logo.png
+/public/star.svg
 /storage/*.key
 /storage/pail
 /vendor
