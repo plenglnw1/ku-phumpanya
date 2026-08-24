@@ -76,8 +76,8 @@ jobs:
       - name: Build deploy tarball
         working-directory: ku-phumpanya
         run: |
-          bash scripts/build-ku-deploy.sh /tmp/ku-phumpanya-deploy.tgz
-          cp scripts/ku-vm-remote-setup.sh /tmp/ku-vm-remote-setup.sh
+          bash scripts/build-ku-deploy.sh "$GITHUB_WORKSPACE/ku-phumpanya-deploy.tgz"
+          cp scripts/ku-vm-remote-setup.sh "$GITHUB_WORKSPACE/ku-vm-remote-setup.sh"
 
       - name: Parse SSH target
         id: ssh
@@ -94,9 +94,9 @@ jobs:
           host: ${{ steps.ssh.outputs.host }}
           username: ${{ steps.ssh.outputs.user }}
           key: ${{ secrets.KU_SSH_KEY }}
-          source: /tmp/ku-phumpanya-deploy.tgz,/tmp/ku-vm-remote-setup.sh
+          source: ku-phumpanya-deploy.tgz,ku-vm-remote-setup.sh
           target: ~/
-          strip_components: 1
+
 
       - name: Run remote setup
         uses: appleboy/ssh-action@v1.0.3
@@ -126,8 +126,6 @@ jobs:
               export GOOGLE_CLIENT_SECRET
             fi
             export GOOGLE_REDIRECT_URI
-            mv ~/tmp/ku-vm-remote-setup.sh ~/ku-vm-remote-setup.sh 2>/dev/null || true
-            mv ~/tmp/ku-phumpanya-deploy.tgz ~/ku-phumpanya-deploy.tgz 2>/dev/null || true
             bash ~/ku-vm-remote-setup.sh
 
       - name: Smoke test
