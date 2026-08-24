@@ -65,7 +65,7 @@ class GoogleAuthTest extends TestCase
 
         $response = $this->get('/auth/google/callback');
 
-        $response->assertRedirect($this->frontendRedirect('/learn/'));
+        $response->assertRedirect($this->frontendRedirect('/'));
         $this->assertAuthenticatedAs($user);
     }
 }

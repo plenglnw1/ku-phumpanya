@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\GraphRag\Agent\GeminiClient;
 use App\Support\RedirectAfterLogin;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -14,7 +15,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Shared per request so AgentPipeline's call counter sees the calls the
+        // router, sub-agents and synthesizer actually make, and so a 429/503
+        // opening the circuit stops the remaining components too.
+        $this->app->singleton(GeminiClient::class);
     }
 
     /**
