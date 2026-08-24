@@ -13,7 +13,7 @@ class AdminPanelAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_user_is_redirected_to_frontend_admin_after_login(): void
+    public function test_admin_user_is_redirected_to_filament_after_login(): void
     {
         $admin = User::factory()->create([
             'role' => UserRole::Admin,
@@ -24,7 +24,7 @@ class AdminPanelAccessTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect($this->frontendRedirect('/admin/'));
+        $response->assertRedirect(config('app.url').'/filament');
     }
 
     public function test_non_admin_cannot_access_filament_panel(): void
