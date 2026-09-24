@@ -124,7 +124,7 @@ final class Synthesizer
      * @param  list<array<string, mixed>>  $docs
      * @return list<array<string, mixed>>
      */
-    private function groupIntoPhases(array $docs, int $maxPhases = 3, int $maxModules = 4): array
+    public function groupIntoPhases(array $docs, int $maxPhases = 3, int $maxModules = 4): array
     {
         $groups = [];
         foreach ($docs as $doc) {

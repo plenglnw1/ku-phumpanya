@@ -28,10 +28,12 @@ final class ResultFormatter
 
     /**
      * @param  array<string, mixed>|null  $learningPath
-     * @param  list<array<string, mixed>>  $fallbackPaths
+     * @param  list<array<string, mixed>>  $fallbackPhases  Already-built phases (e.g.
+     *         Synthesizer::groupIntoPhases on this query's own retrieved docs) — used
+     *         as-is, never re-ranked, so the fallback is guaranteed on-topic.
      * @return array<string, mixed>
      */
-    public static function normalizeLearningPath(?array $learningPath, array $fallbackPaths = []): array
+    public static function normalizeLearningPath(?array $learningPath, array $fallbackPhases = []): array
     {
         if ($learningPath !== null && ! empty($learningPath['phases'] ?? $learningPath['modules'] ?? null)) {
             return [
@@ -41,20 +43,15 @@ final class ResultFormatter
             ];
         }
 
-        $modules = collect($fallbackPaths)->map(fn (array $path): array => [
-            'name' => 'Phase: '.($path['title'] ?? 'Module'),
-            'intro' => (string) ($path['description'] ?? $path['summary'] ?? ''),
-            'modules' => collect($path['courses'] ?? [])->map(fn (array $c): array => [
-                'title' => (string) ($c['title'] ?? 'Course'),
-                'hours' => '8-12 hrs',
-                'desc' => (string) ($c['url'] ?? ''),
-            ])->all(),
-        ])->all();
+        $moduleCount = array_sum(array_map(
+            static fn (array $p): int => count($p['modules'] ?? []),
+            $fallbackPhases,
+        ));
 
         return [
-            'estimated_hours' => '90-140',
-            'subtitle' => 'Ranked by BCG tags + faculty overlap',
-            'phases' => $modules,
+            'estimated_hours' => $moduleCount > 0 ? ($moduleCount * 8).'-'.($moduleCount * 12) : '90-140',
+            'subtitle' => 'Heuristic path from retrieved sources',
+            'phases' => $fallbackPhases,
         ];
     }
 

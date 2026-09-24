@@ -77,7 +77,7 @@ final class AdvancedGenerator
             'title' => $synth['title'],
             'overview' => $synth['overview'],
             'knowledge_graph' => $graph,
-            'learning_path' => ResultFormatter::normalizeLearningPath($synth['learning_path']),
+            'learning_path' => ResultFormatter::normalizeLearningPath($synth['learning_path'], $context['fallback_phases'] ?? []),
             'evidence' => ResultFormatter::toEvidence($context['docs']),
             '_sub_queries' => $subQueries,
         ];

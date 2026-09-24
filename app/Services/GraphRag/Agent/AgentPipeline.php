@@ -22,6 +22,7 @@ final class AgentPipeline
         private readonly IntermediateGenerator $intermediate,
         private readonly AdvancedGenerator $advanced,
         private readonly GeminiClient $gemini,
+        private readonly Synthesizer $synthesizer,
     ) {}
 
     /**
@@ -34,6 +35,12 @@ final class AgentPipeline
         $retrievalStart = microtime(true);
         $context = $this->linker->link($query);
         $retrievalMs = (int) round((microtime(true) - $retrievalStart) * 1000);
+
+        // Gemini's own learning_path.phases is sometimes empty (schema allows it),
+        // in which case every tier generator falls through to normalizeLearningPath's
+        // fallback branch. Compute that fallback once, here, from the docs actually
+        // retrieved for this query — so it's never missing and always on-topic.
+        $context['fallback_phases'] = $this->synthesizer->groupIntoPhases($context['docs']);
 
         $route = $this->router->route($context);
         $tier = $route['tier'];
