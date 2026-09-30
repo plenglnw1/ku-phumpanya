@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\KnowledgeGraphController;
 use App\Http\Controllers\LearningPathController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
@@ -27,6 +28,14 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth', 'can:view-knowledge-graph'])->prefix('graph')->name('graph.')->group(function () {
+    Route::get('/', [KnowledgeGraphController::class, 'index'])->name('index');
+    Route::get('/overview', [KnowledgeGraphController::class, 'overview'])->name('overview');
+    Route::get('/search', [KnowledgeGraphController::class, 'search'])->name('search');
+    Route::get('/neighbours', [KnowledgeGraphController::class, 'neighbours'])->name('neighbours');
+    Route::post('/cypher', [KnowledgeGraphController::class, 'cypher'])->middleware('throttle:30,1')->name('cypher');
 });
 
 require __DIR__.'/auth.php';

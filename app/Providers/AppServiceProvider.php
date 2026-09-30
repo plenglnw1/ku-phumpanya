@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\GraphRag\Agent\GeminiClient;
 use App\Support\RedirectAfterLogin;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::define('view-knowledge-graph', static fn (User $user): bool => $user->isAdmin()
+            || in_array(strtolower($user->email), (array) config('knowledge_graph.viewer_emails'), true));
+
         RedirectIfAuthenticated::redirectUsing(
             fn ($request) => RedirectAfterLogin::for($request->user()),
         );

@@ -53,6 +53,19 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             My Progress
         </a>
+        @can('view-knowledge-graph')
+            <a
+                href="{{ route('graph.index') }}"
+                @class([
+                    'flex items-center gap-2 rounded-lg px-3 py-2 font-medium transition',
+                    'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200' => $active === 'graph',
+                    'text-gray-600 hover:bg-white/60 hover:text-gray-900' => $active !== 'graph',
+                ])
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" stroke-width="2"/><circle cx="19" cy="5" r="2" stroke-width="2"/><circle cx="19" cy="19" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M7 11l10-5M7 13l10 5"/></svg>
+                Knowledge Graph
+            </a>
+        @endcan
     </nav>
 
     <div class="mt-8 flex items-center justify-between px-2">
