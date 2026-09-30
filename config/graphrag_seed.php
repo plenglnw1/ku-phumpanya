@@ -14,7 +14,7 @@ return [
             'title' => 'Carbon Footprint และ Carbon Neutrality ภาคเกษตร-ป่าไม้',
             'summary' => 'หัวข้อศูนย์กลางที่เชื่อมงานวิจัยการลดคาร์บอนของภาคเกษตร ป่าไม้ และอุตสาหกรรมเกษตร',
             'bcg_tags' => ['Green'],
-            'faculty_tags' => ['เกษตร', 'อุตสาหกรรมเกษตร', 'วนศาสตร์'],
+            'faculty_tags' => ['วนศาสตร์', 'เกษตร', 'อุตสาหกรรมเกษตร', 'ประมง'],
             'sources' => [
                 ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=Climate%20change', 'section' => 'keyword'],
                 ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
@@ -30,7 +30,7 @@ return [
             'title' => 'Microplastics กับคุณภาพน้ำ',
             'summary' => 'การติดตามผลกระทบไมโครพลาสติกต่อระบบนิเวศน้ำและห่วงโซ่อาหาร',
             'bcg_tags' => ['Green', 'Circular'],
-            'faculty_tags' => ['เกษตร', 'อุตสาหกรรมเกษตร', 'วนศาสตร์'],
+            'faculty_tags' => ['ประมง', 'อุตสาหกรรมเกษตร', 'เกษตร'],
             'sources' => [
                 ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=water%20quality', 'section' => 'keyword'],
                 ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
@@ -46,7 +46,7 @@ return [
             'title' => 'Chitosan และบรรจุภัณฑ์ชีวภาพ',
             'summary' => 'การใช้ไคโตซานจากของเหลืออุตสาหกรรมอาหารเพื่อบรรจุภัณฑ์ย่อยสลายได้',
             'bcg_tags' => ['Bio', 'Circular'],
-            'faculty_tags' => ['เกษตร', 'อุตสาหกรรมเกษตร', 'วนศาสตร์'],
+            'faculty_tags' => ['ประมง', 'อุตสาหกรรมเกษตร', 'เกษตร'],
             'sources' => [
                 ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=chitosan', 'section' => 'keyword'],
                 ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
