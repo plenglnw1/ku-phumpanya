@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Http;
  */
 final class Neo4jClient
 {
-    private const HIDDEN_PROPERTIES = ['content_hash'];
-
     public function isConfigured(): bool
     {
         return (bool) config('knowledge_graph.enabled')
@@ -83,18 +81,20 @@ final class Neo4jClient
         $edges = [];
         foreach ($data as $record) {
             if (count($rows) < $rowLimit) {
-                $rows[] = array_map($this->plain(...), (array) ($record['row'] ?? []));
+                $rows[] = array_values((array) ($record['row'] ?? []));
             }
             foreach ((array) ($record['graph']['nodes'] ?? []) as $node) {
-                if (count($nodes) < $nodeLimit || isset($nodes[$node['id']])) {
-                    $nodes[$node['id']] = $this->node($node);
+                $id = (string) ($node['elementId'] ?? $node['id']);
+                if (count($nodes) < $nodeLimit || isset($nodes[$id])) {
+                    $nodes[$id] = $this->node($id, $node);
                 }
             }
             foreach ((array) ($record['graph']['relationships'] ?? []) as $edge) {
-                $edges[$edge['id']] = [
-                    'id' => (string) $edge['id'],
-                    'from' => (string) $edge['startNode'],
-                    'to' => (string) $edge['endNode'],
+                $id = (string) ($edge['elementId'] ?? $edge['id']);
+                $edges[$id] = [
+                    'id' => $id,
+                    'from' => (string) ($edge['startNodeElementId'] ?? $edge['startNode']),
+                    'to' => (string) ($edge['endNodeElementId'] ?? $edge['endNode']),
                     'type' => (string) $edge['type'],
                 ];
             }
@@ -115,26 +115,17 @@ final class Neo4jClient
      * @param  array<string, mixed>  $node
      * @return array<string, mixed>
      */
-    private function node(array $node): array
+    private function node(string $id, array $node): array
     {
-        $properties = array_diff_key((array) ($node['properties'] ?? []), array_flip(self::HIDDEN_PROPERTIES));
+        $properties = (array) ($node['properties'] ?? []);
         $labels = array_values((array) ($node['labels'] ?? []));
 
         return [
-            'id' => (string) $node['id'],
-            'uid' => $properties['uid'] ?? null,
+            'id' => $id,
             'label' => $labels[0] ?? 'Node',
-            'name' => (string) ($properties['name'] ?? $properties['title'] ?? $properties['uid'] ?? $node['id']),
+            'name' => (string) ($properties['name'] ?? $properties['title'] ?? $properties['name_en']
+                ?? $properties['name_th'] ?? $properties['code'] ?? $id),
             'properties' => $properties,
         ];
-    }
-
-    private function plain(mixed $value): mixed
-    {
-        if (is_array($value)) {
-            return array_diff_key($value, array_flip(self::HIDDEN_PROPERTIES));
-        }
-
-        return $value;
     }
 }

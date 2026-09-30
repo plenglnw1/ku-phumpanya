@@ -18,7 +18,11 @@ use Illuminate\View\View;
  */
 final class KnowledgeGraphController extends Controller
 {
-    private const CONCEPT_LABELS = ['Topic', 'Faculty', 'BCGPillar', 'Course', 'Keyword', 'Concept'];
+    // Schema of KU-BCG elastic-search/neo4j_import.py. Keyword is left out of the
+    // overview: document keywords make it the largest label by far.
+    private const DOMAIN_LABELS = ['Topic', 'Faculty', 'BcgPillar', 'Course', 'Entity'];
+
+    private const HUB_ENTITY = 'CarbonFootprint';
 
     private const NEIGHBOUR_LIMIT = 60;
 
@@ -46,7 +50,16 @@ final class KnowledgeGraphController extends Controller
             'MATCH (a)-[r]->(b) '
             .'WHERE any(l IN labels(a) WHERE l IN $labels) AND any(l IN labels(b) WHERE l IN $labels) '
             .'RETURN a, r, b',
-            ['labels' => self::CONCEPT_LABELS],
+            ['labels' => self::DOMAIN_LABELS],
+        );
+    }
+
+    public function hub(): JsonResponse
+    {
+        return $this->respond(
+            'MATCH (n:Entity {name: $name}) OPTIONAL MATCH (n)-[r]-(m) '
+            .'WITH n, r, m LIMIT $limit RETURN n, r, m',
+            ['name' => self::HUB_ENTITY, 'limit' => self::NEIGHBOUR_LIMIT],
         );
     }
 
@@ -55,21 +68,21 @@ final class KnowledgeGraphController extends Controller
         $validated = $request->validate(['q' => ['required', 'string', 'min:2', 'max:100']]);
 
         return $this->respond(
-            'MATCH (n) WHERE n.uid IS NOT NULL '
-            .'AND (toLower(coalesce(n.name, "")) CONTAINS toLower($q) OR n.uid = $q) '
-            .'RETURN n ORDER BY size(coalesce(n.name, "")) LIMIT 20',
+            'MATCH (n) WITH n, coalesce(n.name, n.title, n.name_en, "") AS label, coalesce(n.name_th, "") AS thai '
+            .'WHERE toLower(label) CONTAINS toLower($q) OR toLower(thai) CONTAINS toLower($q) '
+            .'RETURN n ORDER BY size(label) LIMIT 20',
             ['q' => $validated['q']],
         );
     }
 
     public function neighbours(Request $request): JsonResponse
     {
-        $validated = $request->validate(['uid' => ['required', 'string', 'max:300']]);
+        $validated = $request->validate(['id' => ['required', 'string', 'max:100']]);
 
         return $this->respond(
-            'MATCH (n {uid: $uid}) OPTIONAL MATCH (n)-[r]-(m) '
+            'MATCH (n) WHERE elementId(n) = $id OPTIONAL MATCH (n)-[r]-(m) '
             .'WITH n, r, m LIMIT $limit RETURN n, r, m',
-            ['uid' => $validated['uid'], 'limit' => self::NEIGHBOUR_LIMIT],
+            ['id' => $validated['id'], 'limit' => self::NEIGHBOUR_LIMIT],
         );
     }
 

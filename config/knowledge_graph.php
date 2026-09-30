@@ -22,11 +22,9 @@ return [
         explode(',', (string) env('KG_VIEWER_EMAILS', '')),
     ))),
 
-    // Markdown validation reports published by the knowledge-graph import (kg-ctl.sh import).
+    // Markdown reports published by the KU-BCG import (deploy/neo4j-ku/kg-ctl.sh import).
     'reports_path' => env('KG_REPORTS_PATH', ''),
     'reports' => [
-        'graph-validation' => 'Graph validation (1.2.1–1.2.4)',
-        'owl-validation' => 'OWL validation (1.2.5)',
-        'ioc' => 'IOC (1.2.5)',
+        'neo4j-verify' => 'Gate verification (1.2.1–1.2.4)',
     ],
 ];

@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 Route::middleware(['auth', 'can:view-knowledge-graph'])->prefix('graph')->name('graph.')->group(function () {
     Route::get('/', [KnowledgeGraphController::class, 'index'])->name('index');
     Route::get('/overview', [KnowledgeGraphController::class, 'overview'])->name('overview');
+    Route::get('/hub', [KnowledgeGraphController::class, 'hub'])->name('hub');
     Route::get('/search', [KnowledgeGraphController::class, 'search'])->name('search');
     Route::get('/neighbours', [KnowledgeGraphController::class, 'neighbours'])->name('neighbours');
     Route::post('/cypher', [KnowledgeGraphController::class, 'cypher'])->middleware('throttle:30,1')->name('cypher');

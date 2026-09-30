@@ -3,8 +3,8 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900">BCG Knowledge Graph</h1>
             <p class="mt-1 text-sm text-gray-500">
-                Neo4j graph of KU Forest research, KUKR documents and KU MOOC courses, linked by the BCG Education ontology.
-                Read-only.
+                Neo4j graph of KU Forest research, KUKR documents and KU MOOC courses, linked through the six BCG topics,
+                pilot faculties and the seed relation triples. Read-only.
             </p>
         </div>
 
@@ -17,7 +17,7 @@
         <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
             <div class="space-y-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" data-kg-action="overview" class="rounded-lg bg-phumpanya-900 px-3 py-2 text-xs font-semibold text-white hover:bg-phumpanya-800">Concept layer</button>
+                    <button type="button" data-kg-action="overview" class="rounded-lg bg-phumpanya-900 px-3 py-2 text-xs font-semibold text-white hover:bg-phumpanya-800">Domain layer</button>
                     <button type="button" data-kg-action="carbon" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Carbon Footprint hub</button>
                     <button type="button" data-kg-action="clear" class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Clear</button>
                     <form data-kg-search class="ml-auto flex items-center gap-2">
@@ -58,7 +58,7 @@
                 MATCH … RETURN only. Up to {{ config('knowledge_graph.row_limit') }} rows; queries stop after 15 seconds.
             </p>
             <form data-kg-cypher class="mt-3 space-y-2">
-                <textarea name="query" rows="3" maxlength="{{ \App\Services\KnowledgeGraph\CypherGuard::MAX_LENGTH }}" class="w-full rounded-lg border-gray-200 font-mono text-xs focus:border-phumpanya-700 focus:ring-phumpanya-700">MATCH (f:Faculty)-[r:mitigatesCarbonVia]->(t:Topic) RETURN f, r, t</textarea>
+                <textarea name="query" rows="3" maxlength="{{ \App\Services\KnowledgeGraph\CypherGuard::MAX_LENGTH }}" class="w-full rounded-lg border-gray-200 font-mono text-xs focus:border-phumpanya-700 focus:ring-phumpanya-700">MATCH (f:Entity)-[r:mitigatesCarbonVia]->(cf:Entity {name: 'CarbonFootprint'}) RETURN f, r, cf</textarea>
                 <div class="flex items-center gap-3">
                     <button type="submit" class="rounded-lg bg-phumpanya-900 px-3 py-2 text-xs font-semibold text-white hover:bg-phumpanya-800">Run</button>
                     <p data-kg-cypher-status class="text-xs text-gray-500"></p>
@@ -79,7 +79,7 @@
                     @if ($report['html'] !== null)
                         {!! $report['html'] !!}
                     @else
-                        <p class="text-gray-400">Not available yet{{ $report['key'] === 'ioc' ? ' (waiting for the three experts\' ratings)' : '' }}.</p>
+                        <p class="text-gray-400">Not available yet.</p>
                     @endif
                 </article>
             @endforeach
@@ -107,14 +107,15 @@
             (() => {
                 const routes = {
                     overview: @json(route('graph.overview')),
+                    hub: @json(route('graph.hub')),
                     search: @json(route('graph.search')),
                     neighbours: @json(route('graph.neighbours')),
                     cypher: @json(route('graph.cypher')),
                 };
                 const csrf = document.querySelector('meta[name="csrf-token"]').content;
                 const colors = {
-                    Topic: '#2D5A43', Faculty: '#b45309', BCGPillar: '#15803d', Course: '#7c3aed', Keyword: '#0369a1',
-                    Concept: '#0e7490', Research: '#be123c', Document: '#a16207', Author: '#6b7280', Department: '#9ca3af',
+                    Topic: '#2D5A43', Faculty: '#b45309', BcgPillar: '#15803d', Course: '#7c3aed', Entity: '#0e7490',
+                    Keyword: '#0369a1', Research: '#be123c', Document: '#a16207', Author: '#6b7280',
                 };
                 const $ = (selector) => document.querySelector(selector);
                 const status = $('[data-kg-status]');
@@ -137,7 +138,6 @@
 
                 const nodes = new vis.DataSet();
                 const edges = new vis.DataSet();
-                const byUid = new Map();
                 const network = new vis.Network($('[data-kg-canvas]'), { nodes, edges }, {
                     nodes: { shape: 'dot', size: 12, font: { size: 12, face: 'Figtree, sans-serif' } },
                     edges: { arrows: { to: { enabled: true, scaleFactor: 0.5 } }, font: { size: 9, align: 'middle', color: '#6b7280' }, color: '#cbd5e1', smooth: { type: 'dynamic' } },
@@ -160,12 +160,11 @@
 
                 const addGraph = (graph) => {
                     nodes.update(graph.nodes.map((node) => {
-                        if (node.uid) byUid.set(node.id, node);
                         const short = node.name.length > 40 ? `${node.name.slice(0, 38)}…` : node.name;
                         return {
                             id: node.id, label: short, title: `${node.label}: ${node.name}`,
                             color: colors[node.label] || '#94a3b8', raw: node,
-                            size: ['Topic', 'Faculty'].includes(node.label) ? 20 : 12,
+                            size: ['Topic', 'Faculty'].includes(node.label) || node.name === 'CarbonFootprint' ? 20 : 12,
                         };
                     }));
                     edges.update(graph.edges.map((edge) => ({ id: edge.id, from: edge.from, to: edge.to, label: edge.type })));
@@ -181,7 +180,7 @@
                     }
                 };
 
-                const expand = (uid) => run(request(`${routes.neighbours}?uid=${encodeURIComponent(uid)}`));
+                const expand = (id) => run(request(`${routes.neighbours}?id=${encodeURIComponent(id)}`));
 
                 const showDetails = (node) => {
                     const details = $('[data-kg-details]');
@@ -214,7 +213,7 @@
                 });
                 network.on('doubleClick', ({ nodes: picked }) => {
                     const node = picked.length ? nodes.get(picked[0]) : null;
-                    if (node && node.raw.uid) expand(node.raw.uid);
+                    if (node) expand(node.id);
                 });
 
                 document.querySelectorAll('[data-kg-action]').forEach((button) => {
@@ -223,7 +222,7 @@
                         nodes.clear();
                         edges.clear();
                         if (action === 'overview') run(request(routes.overview));
-                        if (action === 'carbon') expand('topic:4');
+                        if (action === 'carbon') run(request(routes.hub));
                         if (action === 'clear') status.textContent = '';
                     });
                 });
@@ -245,7 +244,7 @@
                             button.className = 'w-full truncate rounded px-1 py-0.5 text-left hover:bg-gray-100';
                             button.textContent = `${node.label} · ${node.name}`;
                             button.title = node.name;
-                            button.addEventListener('click', () => { if (node.uid) expand(node.uid); showDetails(node); });
+                            button.addEventListener('click', () => { expand(node.id); showDetails(node); });
                             item.append(button);
                             list.append(item);
                         });

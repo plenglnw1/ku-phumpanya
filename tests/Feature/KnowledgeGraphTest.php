@@ -54,16 +54,15 @@ class KnowledgeGraphTest extends TestCase
     {
         $directory = sys_get_temp_dir().'/kg-reports-'.uniqid();
         mkdir($directory);
-        file_put_contents("{$directory}/owl-validation.md", "# OWL validation\n\n| Check | Result |\n|---|---|\n| TBox | PASS |\n\n<script>alert(1)</script>\n");
+        file_put_contents("{$directory}/neo4j-verify.md", "# Neo4j gate verification\n\n| label | cnt |\n|---|---|\n| Topic | 6 |\n\n<script>alert(1)</script>\n");
         config()->set('knowledge_graph.reports_path', $directory);
 
         $admin = User::factory()->create(['role' => UserRole::Admin]);
 
         $this->actingAs($admin)->get(route('graph.index'))
             ->assertOk()
-            ->assertSee('<td>PASS</td>', false)
-            ->assertDontSee('<script>alert(1)</script>', false)
-            ->assertSee('waiting for the three experts', false);
+            ->assertSee('<td>Topic</td>', false)
+            ->assertDontSee('<script>alert(1)</script>', false);
 
         array_map('unlink', glob("{$directory}/*"));
         rmdir($directory);
@@ -77,14 +76,32 @@ class KnowledgeGraphTest extends TestCase
         $this->actingAs($admin)->getJson(route('graph.overview'))
             ->assertOk()
             ->assertJsonCount(2, 'nodes')
-            ->assertJsonPath('nodes.0.name', 'Forestry')
-            ->assertJsonPath('nodes.0.uid', 'faculty:วนศาสตร์')
-            ->assertJsonMissingPath('nodes.0.properties.content_hash')
+            ->assertJsonPath('nodes.0.id', '4:db:1')
+            ->assertJsonPath('nodes.0.name', 'Faculty_วนศาสตร์')
+            ->assertJsonPath('nodes.1.name', 'Carbon Footprint & Carbon Neutrality')
             ->assertJsonPath('edges.0.type', 'mitigatesCarbonVia')
-            ->assertJsonPath('edges.0.from', '1');
+            ->assertJsonPath('edges.0.from', '4:db:1')
+            ->assertJsonPath('edges.0.to', '4:db:2');
 
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('Access-Mode', 'READ')
             && $request->hasHeader('Authorization', 'Basic '.base64_encode('neo4j:secret')));
+    }
+
+    public function test_hub_and_neighbours_query_by_name_and_element_id(): void
+    {
+        Http::fake([self::NEO4J => Http::response($this->graphResponse())]);
+        $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+        $this->actingAs($admin)->getJson(route('graph.hub'))->assertOk();
+        $this->actingAs($admin)->getJson(route('graph.neighbours', ['id' => '4:db:2']))->assertOk();
+        $this->actingAs($admin)->getJson(route('graph.neighbours'))->assertUnprocessable();
+        $this->actingAs($admin)->getJson(route('graph.search', ['q' => 'x']))->assertUnprocessable();
+
+        $parameters = static fn (Request $request): array => (array) $request['statements'][0]['parameters'];
+
+        Http::assertSent(fn (Request $request): bool => ($parameters($request)['name'] ?? null) === 'CarbonFootprint');
+        Http::assertSent(fn (Request $request): bool => ($parameters($request)['id'] ?? null) === '4:db:2'
+            && str_contains($request['statements'][0]['statement'], 'elementId(n) = $id'));
     }
 
     public function test_cypher_rejects_writes_and_procedures_without_calling_neo4j(): void
@@ -154,14 +171,15 @@ class KnowledgeGraphTest extends TestCase
             'results' => [[
                 'columns' => ['a', 'r', 'b'],
                 'data' => [[
-                    'row' => [['name' => 'Forestry'], ['via' => 'carbon_stock'], ['name' => 'Carbon Footprint']],
+                    'row' => [['name' => 'Faculty_วนศาสตร์'], [], ['id' => '4', 'name_en' => 'Carbon Footprint & Carbon Neutrality']],
                     'graph' => [
                         'nodes' => [
-                            ['id' => '1', 'labels' => ['Faculty'], 'properties' => ['uid' => 'faculty:วนศาสตร์', 'name' => 'Forestry', 'content_hash' => 'abc']],
-                            ['id' => '2', 'labels' => ['Topic'], 'properties' => ['uid' => 'topic:4', 'name' => 'Carbon Footprint']],
+                            ['id' => '1', 'elementId' => '4:db:1', 'labels' => ['Entity'], 'properties' => ['name' => 'Faculty_วนศาสตร์']],
+                            ['id' => '2', 'elementId' => '4:db:2', 'labels' => ['Topic'], 'properties' => ['id' => '4', 'name_en' => 'Carbon Footprint & Carbon Neutrality', 'name_th' => 'คาร์บอนฟุตพริ้นท์']],
                         ],
                         'relationships' => [
-                            ['id' => '9', 'type' => 'mitigatesCarbonVia', 'startNode' => '1', 'endNode' => '2', 'properties' => []],
+                            ['id' => '9', 'elementId' => '5:db:9', 'type' => 'mitigatesCarbonVia', 'startNode' => '1', 'endNode' => '2',
+                                'startNodeElementId' => '4:db:1', 'endNodeElementId' => '4:db:2', 'properties' => []],
                         ],
                     ],
                 ]],

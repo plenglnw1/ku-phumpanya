@@ -203,17 +203,17 @@ Rebuild the Vercel app with `NEXT_PUBLIC_API_URL=https://phumpanya.ku.ac.th` (mu
     learn/ register/ …     # Next static export (same-domain SPA)
     build/ css/ js/ ...
   ku-phumpanya-app/        # Laravel app (.env, vendor, artisan)
-  kg-reports/              # knowledge-graph validation reports (read by /graph)
+  kg-reports/              # neo4j_verify.cypher results (read by /graph)
 ~/ku-phumpanya             # symlink → ku-phumpanya-app
-~/neo4j-kg/                # Neo4j + n10s (no Docker), 127.0.0.1:17474/17687, read-only DB
+~/neo4j-kg/                # Neo4j (no Docker), 127.0.0.1:17474/17687, read-only DB
 ```
 
-**Knowledge graph (`/graph`).** Neo4j is installed and imported from the KU-BCG repo:
-`bash knowledge-graph/deploy/deploy-ku.sh` (see KU-BCG `knowledge-graph/README.md`).
+**Knowledge graph (`/graph`).** Neo4j runs KU-BCG's `elastic-search/neo4j_import.cypher`; install and
+re-import from the KU-BCG repo with `bash deploy/neo4j-ku/deploy-ku.sh`.
 Cron keeps it running (`@reboot` + 10-minute watchdog); `~/neo4j-kg/bin/kg-ctl.sh status|restart|import`.
 The Laravel `.env` needs `KG_ENABLED=true`, `KG_NEO4J_PASSWORD` (from `~/neo4j-kg/.env`) and
 `KG_REPORTS_PATH=~/html/kg-reports` (absolute path). Admins can open `/graph`; add other
-accounts, e.g. the IOC experts, with `KG_VIEWER_EMAILS=a@ku.th,b@ku.th` then `php artisan config:cache`.
+accounts with `KG_VIEWER_EMAILS=a@ku.th,b@ku.th` then `php artisan config:cache`.
 
 **สำคัญ:** KU ใช้ `html/public/` เป็น document root — **ไม่ใช่** `html/` ตรงๆ  
 phpinfo จะแสดง `DOCUMENT_ROOT=/home/web/.../html/public`
