@@ -26,11 +26,17 @@ echo "    (enter SSH password when prompted)"
 scp "$TARBALL" "$ROOT/scripts/ku-vm-remote-setup.sh" "$KU_SSH_HOST:~/"
 
 echo "==> run remote setup"
+# Do not export empty OAuth vars. Laravel dotenv will not override them, so
+# config:cache would freeze a blank client id over the server .env.
 ssh "$KU_SSH_HOST" bash -s <<REMOTE
 export KU_MYSQL_PASSWORD='$(printf '%s' "${KU_MYSQL_PASSWORD:-}" | sed "s/'/'\\\\''/g")'
 export KU_FRONTEND_URL='$(printf '%s' "${KU_FRONTEND_URL:-https://phumpanya.ku.ac.th}" | sed "s/'/'\\\\''/g")'
-export GOOGLE_CLIENT_ID='$(printf '%s' "${GOOGLE_CLIENT_ID:-}" | sed "s/'/'\\\\''/g")'
-export GOOGLE_CLIENT_SECRET='$(printf '%s' "${GOOGLE_CLIENT_SECRET:-}" | sed "s/'/'\\\\''/g")'
+if [ -n '${GOOGLE_CLIENT_ID:-}' ]; then
+  export GOOGLE_CLIENT_ID='$(printf '%s' "${GOOGLE_CLIENT_ID:-}" | sed "s/'/'\\\\''/g")'
+fi
+if [ -n '${GOOGLE_CLIENT_SECRET:-}' ]; then
+  export GOOGLE_CLIENT_SECRET='$(printf '%s' "${GOOGLE_CLIENT_SECRET:-}" | sed "s/'/'\\\\''/g")'
+fi
 export GOOGLE_REDIRECT_URI='$(printf '%s' "${GOOGLE_REDIRECT_URI:-https://phumpanya.ku.ac.th/auth/google/callback}" | sed "s/'/'\\\\''/g")'
 bash ~/ku-vm-remote-setup.sh
 REMOTE

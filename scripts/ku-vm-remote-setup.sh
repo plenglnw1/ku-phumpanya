@@ -215,6 +215,13 @@ rm -f "$APP_DIR/.htaccess"
 find "$HTML_DIR" "$APP_DIR" -name '._*' -delete 2>/dev/null || true
 
 echo "==> optimize"
+# An empty exported GOOGLE_* must not shadow .env during config:cache.
+if [ -z "${GOOGLE_CLIENT_ID:-}" ]; then
+  unset GOOGLE_CLIENT_ID || true
+fi
+if [ -z "${GOOGLE_CLIENT_SECRET:-}" ]; then
+  unset GOOGLE_CLIENT_SECRET || true
+fi
 php artisan config:cache
 php artisan route:clear
 php artisan view:cache
