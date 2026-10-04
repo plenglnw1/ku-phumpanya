@@ -16,6 +16,16 @@ class GoogleAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_google_redirect_does_not_request_profile_scope(): void
+    {
+        $location = $this->get('/auth/google')->assertRedirect()->headers->get('Location');
+
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->assertSame('openid email', $query['scope']);
+        $this->assertStringNotContainsString('profile', $query['scope']);
+    }
+
     public function test_google_callback_creates_user_and_redirects_to_profile_completion(): void
     {
         $abstractUser = Mockery::mock(SocialiteUser::class);
