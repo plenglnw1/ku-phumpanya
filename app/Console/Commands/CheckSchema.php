@@ -29,7 +29,7 @@ final class CheckSchema extends Command
 
         $pending = array_diff(
             array_keys($migrator->getMigrationFiles(database_path('migrations'))),
-            $migrator->getRepository()->getRan(),
+            $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [],
         );
         foreach ($pending as $name) {
             $problems[] = "pending migration: {$name}";
@@ -39,7 +39,8 @@ final class CheckSchema extends Command
         foreach (array_diff(self::USER_COLUMNS, $columns->pluck('name')->all()) as $missing) {
             $problems[] = "users.{$missing} is missing";
         }
-        if (! ($columns->firstWhere('name', 'password')['nullable'] ?? false)) {
+        $password = $columns->firstWhere('name', 'password');
+        if ($password !== null && ! ($password['nullable'] ?? false)) {
             $problems[] = 'users.password is NOT NULL (Google users have no password)';
         }
 

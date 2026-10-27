@@ -44,8 +44,9 @@ class GoogleAuthController extends Controller
         }
 
         try {
+            $email = $googleUser->getEmail();
             $user = User::query()->where('google_id', $googleUser->getId())->first()
-                ?? User::query()->where('email', $googleUser->getEmail())->first();
+                ?? (filled($email) ? User::query()->where('email', $email)->first() : null);
 
             if ($user !== null && $user->google_id !== null && $user->google_id !== $googleUser->getId()) {
                 Log::warning('google.callback.google_id_conflict', ['user_id' => $user->id]);
@@ -85,13 +86,19 @@ class GoogleAuthController extends Controller
             return $this->failed('account');
         }
 
-        Auth::login($user, remember: true);
+        try {
+            Auth::login($user, remember: true);
 
-        if (! $user->hasCompletedProfile()) {
-            return redirect(rtrim((string) config('app.frontend_url'), '/').'/register/');
+            if (! $user->hasCompletedProfile()) {
+                return redirect(rtrim((string) config('app.frontend_url'), '/').'/register/');
+            }
+
+            return redirect(RedirectAfterLogin::for($user));
+        } catch (Throwable $e) {
+            Log::error('google.callback.session_login', ['user_id' => $user->id, 'exception' => $e]);
+
+            return $this->failed('session');
         }
-
-        return redirect(RedirectAfterLogin::for($user));
     }
 
     private function failed(string $reason): RedirectResponse
