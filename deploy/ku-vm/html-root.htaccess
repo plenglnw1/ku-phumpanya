@@ -1,0 +1,8 @@
+# ~/html/.htaccess — the KU port-80 vhost serves ~/html, the TLS vhost serves
+# ~/html/public (which has its own rewrite rules, so these do not apply there).
+# Plain HTTP only ever redirects to HTTPS (PDPA gate 1.5.3).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ https://phumpanya.ku.ac.th%{REQUEST_URI} [L,R=301]
+</IfModule>
