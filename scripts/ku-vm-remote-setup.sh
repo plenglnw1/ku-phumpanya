@@ -82,6 +82,12 @@ apply_ku_env_baseline() {
   fi
   env_set "APP_URL" "https://phumpanya.ku.ac.th"
   env_set "AUTH_PASSWORD_LOGIN_ENABLED" "false"
+  # PDPA (gate 1.5.3): 30-minute idle timeout, no persistent login, encrypted
+  # session payload, cookies only over HTTPS.
+  env_set "SESSION_LIFETIME" "30"
+  env_set "SESSION_EXPIRE_ON_CLOSE" "true"
+  env_set "SESSION_ENCRYPT" "true"
+  env_set "SESSION_SECURE_COOKIE" "true"
   env_set "GOOGLE_REDIRECT_URI" "${GOOGLE_REDIRECT_URI:-https://phumpanya.ku.ac.th/auth/google/callback}"
 
   if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then

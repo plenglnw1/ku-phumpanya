@@ -37,14 +37,28 @@ final class ProfileController extends Controller
         return response()->json($user->fresh());
     }
 
+    /**
+     * Deletes the account; search history and progress cascade with it. Google
+     * accounts have no password, so they confirm by typing their email instead.
+     */
     public function destroy(Request $request): Response
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
         /** @var User $user */
         $user = $request->user();
+
+        if ($user->password === null) {
+            $request->validateWithBag('userDeletion', [
+                'confirm_email' => ['required', 'string', function (string $attribute, mixed $value, \Closure $fail) use ($user): void {
+                    if (mb_strtolower(trim((string) $value)) !== mb_strtolower($user->email)) {
+                        $fail('อีเมลไม่ตรงกับบัญชีนี้');
+                    }
+                }],
+            ]);
+        } else {
+            $request->validateWithBag('userDeletion', [
+                'password' => ['required', 'current_password'],
+            ]);
+        }
 
         Auth::guard('web')->logout();
         $user->delete();

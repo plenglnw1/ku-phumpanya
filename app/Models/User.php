@@ -30,7 +30,7 @@ use Laravel\Sanctum\HasApiTokens;
     'employee_id',
     'research_affiliation',
 ])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'google_id'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
@@ -41,6 +41,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'profile_completed_at' => 'datetime',
+            'consented_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
