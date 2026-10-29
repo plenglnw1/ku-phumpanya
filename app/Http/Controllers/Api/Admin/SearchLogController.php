@@ -72,7 +72,7 @@ final class SearchLogController extends Controller
                             $row->created_at?->format('Y-m-d H:i'),
                             $row->role_snapshot ?? '',
                             $row->faculty_snapshot ?? '',
-                            $row->query,
+                            self::csvSafe($row->query),
                             $row->query_type ?? '',
                             $row->status,
                             $row->total_nodes_found ?? 0,
@@ -86,6 +86,12 @@ final class SearchLogController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /** User-typed text must not open as a spreadsheet formula. */
+    private static function csvSafe(string $value): string
+    {
+        return preg_match('/^[=+\-@\t\r]/', $value) === 1 ? "'".$value : $value;
     }
 
     /**
