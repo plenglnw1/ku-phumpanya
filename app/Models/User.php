@@ -8,8 +8,10 @@ use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -31,6 +33,7 @@ use Laravel\Sanctum\HasApiTokens;
     'research_affiliation',
 ])]
 #[Hidden(['password', 'remember_token', 'google_id'])]
+#[Appends(['consent_required'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
@@ -55,6 +58,18 @@ class User extends Authenticatable implements FilamentUser
     public function hasCompletedProfile(): bool
     {
         return $this->profile_completed_at !== null;
+    }
+
+    /**
+     * True until the current privacy notice version is accepted, so a new notice
+     * version asks everyone again.
+     *
+     * @return Attribute<bool, never>
+     */
+    protected function consentRequired(): Attribute
+    {
+        return Attribute::get(fn (): bool => $this->consented_at === null
+            || $this->consent_version !== (string) config('pdpa.consent_version'));
     }
 
     /**
