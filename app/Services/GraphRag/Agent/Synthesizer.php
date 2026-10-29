@@ -84,7 +84,7 @@ final class Synthesizer
      * @param  list<array<string, mixed>>  $docs
      * @return array{overview: array<string, string>, learning_path: array<string, mixed>, title: string}
      */
-    private function fallbackSynthesize(string $query, array $extracted, array $docs, string $title): array
+    public function fallbackSynthesize(string $query, array $extracted, array $docs, string $title): array
     {
         $intro = implode(' ', $extracted['key_points'] ?? [])
             ?: (string) ($docs[0]['content'] ?? $docs[0]['abstract'] ?? 'No summary available.');

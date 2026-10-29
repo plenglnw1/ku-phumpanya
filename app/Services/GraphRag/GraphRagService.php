@@ -37,6 +37,21 @@ final class GraphRagService
         return $this->legacySearch($query);
     }
 
+    public function synthesizesAsync(): bool
+    {
+        return (bool) config('gemini.enabled') && (bool) config('gemini.async_synthesis');
+    }
+
+    /**
+     * Retrieval-only result (status "pending") to show while search() synthesizes.
+     *
+     * @return array<string, mixed>
+     */
+    public function draft(string $query): array
+    {
+        return $this->agentPipeline->draft($query);
+    }
+
     /**
      * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>, _meta: array<string, mixed>}
      */
