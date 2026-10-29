@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
@@ -127,10 +125,9 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
-    ),
+    // Not derived from APP_NAME: KU runs with APP_NAME=Laravel, and the generic
+    // "laravel-session" name collides with other Laravel apps on *.ku.ac.th.
+    'cookie' => env('SESSION_COOKIE', 'phumpanya-session'),
 
     /*
     |--------------------------------------------------------------------------
