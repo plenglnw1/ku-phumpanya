@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\GraphRag\Agent;
 
+use App\Services\GraphRag\DocumentSource;
+
 /** G_M / G_A sub-agent — flash-lite structured extraction. */
 final class SubAgentExtractor
 {
@@ -83,20 +85,20 @@ final class SubAgentExtractor
     }
 
     /**
-     * KU MOOC entries are the only true courses, but the corpus holds 6 of them
-     * across 612 documents — most queries retrieve none. Filtering on MOOC alone
-     * therefore yielded an empty learning path. Rank MOOC first, then top up with
-     * the highest-scoring retrieved documents so the phase always has content.
+     * KU MOOC and Non-Degree entries are the only true courses, and most queries
+     * retrieve few or none of them, so filtering on courses alone yielded an empty
+     * learning path. Rank courses first, then top up with the highest-scoring
+     * retrieved documents so the phase always has content.
      *
      * @param  list<array<string, mixed>>  $docs
      * @return list<array<string, string>>
      */
     private function fallbackCourses(array $docs): array
     {
-        $isMooc = fn (array $d): bool => ($d['source'] ?? '') === 'KU_MOOC';
+        $isCourse = fn (array $d): bool => DocumentSource::isCourse($d);
 
-        return collect($docs)->filter($isMooc)
-            ->concat(collect($docs)->reject($isMooc))
+        return collect($docs)->filter($isCourse)
+            ->concat(collect($docs)->reject($isCourse))
             ->take(4)
             ->map(fn (array $d): array => [
                 'title' => (string) ($d['title'] ?? 'Course'),

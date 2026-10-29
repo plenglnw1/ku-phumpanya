@@ -220,6 +220,7 @@ final class Synthesizer
             'KUKR' => 'งานวิจัย KUKR',
             'KU_Forest' => 'โครงการวิจัย KU Forest',
             'KU_MOOC' => 'คอร์สออนไลน์ KU MOOC',
+            'KU_NonDegree' => 'ชุดวิชา Non-Degree',
         ];
 
         return $bySource

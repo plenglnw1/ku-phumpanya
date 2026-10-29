@@ -79,4 +79,37 @@ class SearchHistoryClearApiTest extends TestCase
     {
         $this->deleteJson('/api/search/recent')->assertUnauthorized();
     }
+
+    public function test_deleting_one_search_keeps_the_rest_and_drops_its_progress(): void
+    {
+        $user = User::factory()->create();
+        $target = $this->historyFor($user);
+        $kept = $this->historyFor($user);
+
+        LearningProgress::query()->create([
+            'user_id' => $user->id,
+            'search_history_id' => $target->id,
+            'phase_index' => 0,
+            'card_index' => 0,
+            'completed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson("/api/search/history/{$target->id}")->assertNoContent();
+
+        $this->assertModelMissing($target);
+        $this->assertModelExists($kept);
+        $this->assertDatabaseCount('learning_progress', 0);
+    }
+
+    public function test_cannot_delete_another_users_search(): void
+    {
+        $strangers = $this->historyFor(User::factory()->create());
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->deleteJson("/api/search/history/{$strangers->id}")->assertForbidden();
+        $this->assertModelExists($strangers);
+    }
 }

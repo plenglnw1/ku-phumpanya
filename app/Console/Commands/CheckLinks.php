@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\SearchHistory;
+use App\Services\GraphRag\DocumentSource;
 use App\Services\GraphRag\ElasticClientFactory;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\Pool;
@@ -26,7 +27,7 @@ use Throwable;
 final class CheckLinks extends Command
 {
     protected $signature = 'links:check
-        {--source= : Only check one source (KU_Forest, KUKR, KU_MOOC)}
+        {--source= : Only check one source (KU_Forest, KUKR, KU_MOOC, KU_NonDegree)}
         {--corpus= : Read corpus URLs from an Elasticsearch export (KU-BCG elastic-search/data/all_docs.json) instead of the live index}
         {--limit=0 : Stop after this many URLs (0 = all)}
         {--concurrency=4 : Parallel requests per batch}
@@ -34,7 +35,7 @@ final class CheckLinks extends Command
 
     protected $description = 'Check that source links (KU Forest, KUKR, KU MOOC) return HTTP 200 and write a report';
 
-    private const SOURCES = ['KU_Forest', 'KUKR', 'KU_MOOC'];
+    private const SOURCES = [DocumentSource::FOREST, DocumentSource::KUKR, DocumentSource::MOOC, DocumentSource::NON_DEGREE];
 
     private const USER_AGENT = 'KU-Phumpanya-linkcheck/1.0';
 
@@ -150,7 +151,7 @@ final class CheckLinks extends Command
                 $add($source['url'] ?? null, $source['source'] ?? null);
             }
             foreach ($topic['courses'] ?? [] as $course) {
-                $add($course['url'] ?? null, 'KU_MOOC');
+                $add($course['url'] ?? null, DocumentSource::MOOC);
             }
         }
 

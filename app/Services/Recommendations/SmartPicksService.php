@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Recommendations;
 
 use App\Models\User;
+use App\Services\GraphRag\DocumentSource;
 use App\Services\GraphRag\ElasticClientFactory;
 use Elastic\Elasticsearch\Client;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ final class SmartPicksService
         'KUKR' => 'KUKR',
         'KU_Forest' => 'KU Forest',
         'KU_MOOC' => 'KU MOOC',
+        'KU_NonDegree' => 'KU Non-Degree',
     ];
 
     public function __construct(
@@ -78,7 +80,7 @@ final class SmartPicksService
         foreach ($profile->topPhrases(12) as $phrase => $weight) {
             $should[] = ['multi_match' => [
                 'query' => $phrase,
-                'fields' => ['title^3', 'title_en^2', 'keywords^2', 'topic_names_th', 'topic_names_en', 'abstract'],
+                'fields' => DocumentSource::SEARCH_FIELDS,
                 'type' => 'best_fields',
                 'boost' => round($weight, 3),
             ]];
@@ -231,8 +233,10 @@ final class SmartPicksService
             if ($matchedPillar !== null && $pillarAffinity > 0.2) {
                 $reasons[] = ['kind' => 'pillar', 'text' => sprintf('อยู่ในเสาหลัก %s ที่คุณสนใจ', $matchedPillar)];
             }
-            if (($doc['source'] ?? '') === 'KU_MOOC') {
+            if (($doc['source'] ?? '') === DocumentSource::MOOC) {
                 $reasons[] = ['kind' => 'course', 'text' => 'เป็นคอร์สออนไลน์ที่เริ่มเรียนได้ทันที'];
+            } elseif (($doc['source'] ?? '') === DocumentSource::NON_DEGREE) {
+                $reasons[] = ['kind' => 'course', 'text' => 'เป็นชุดวิชา Non-Degree ของมหาวิทยาลัยเกษตรศาสตร์'];
             }
             if ($year >= (int) date('Y') - 1 && $year > 0) {
                 $reasons[] = ['kind' => 'recency', 'text' => sprintf('งานวิจัยใหม่ปี %d ในหัวข้อนี้', $year)];

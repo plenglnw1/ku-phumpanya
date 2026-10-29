@@ -45,16 +45,22 @@ final class RelationGraphBuilder
             ->take($maxNodes)
             ->values();
 
+        // Non-Degree course titles carry no naming convention, so the relation marks them.
+        $courseNames = collect($edges)
+            ->where('type', 'isCourseFor')
+            ->pluck('from')
+            ->flip();
+
         $palette = ['#EAB308', '#F472B6', '#A855F7', '#3B82F6', '#22C55E', '#86EFAC'];
         $nodes = $nodeNames->map(fn (string $name, int $index): array => [
             'label' => $name,
             'color' => $palette[$index % count($palette)],
-            'type' => $this->inferNodeType($name),
+            'type' => $courseNames->has($name) ? 'course' : $this->inferNodeType($name),
         ])->all();
 
         return [
             'center' => ['label' => $entities[0], 'color' => '#2D5A43', 'type' => 'topic'],
-            'description' => 'GraphRAG subgraph from KU BCG relations (KUKR + KU Forest + KU MOOC).',
+            'description' => 'กราฟความรู้จากความสัมพันธ์ในข้อมูล KU BCG (งานวิจัย KUKR, KU Forest, คอร์ส KU MOOC และชุดวิชา Non-Degree)',
             'nodes' => $nodes,
             'edges' => $edges,
         ];
@@ -136,7 +142,7 @@ final class RelationGraphBuilder
     {
         return [
             'center' => ['label' => 'Knowledge Graph', 'color' => '#2D5A43', 'type' => 'topic'],
-            'description' => 'No graph relations found for this query.',
+            'description' => 'ไม่พบความสัมพันธ์ในกราฟความรู้สำหรับคำค้นนี้',
             'nodes' => [],
             'edges' => [],
         ];
