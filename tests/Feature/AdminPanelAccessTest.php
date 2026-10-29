@@ -42,6 +42,12 @@ class AdminPanelAccessTest extends TestCase
             ->assertOk();
     }
 
+    public function test_guest_is_sent_to_the_panel_login_page(): void
+    {
+        $this->get('/filament')->assertRedirect('/filament/login');
+        $this->get('/filament/login')->assertOk();
+    }
+
     public function test_admin_can_access_filament_panel(): void
     {
         $admin = User::factory()->create([
