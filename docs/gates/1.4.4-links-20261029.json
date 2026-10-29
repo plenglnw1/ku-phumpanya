@@ -1,0 +1,31 @@
+{
+    "checked_at": "2026-10-29T16:40:03+07:00",
+    "summary": {
+        "KU_Forest": {
+            "checked": 203,
+            "ok": 202,
+            "failed": 1,
+            "percent": 99.5
+        },
+        "KUKR": {
+            "checked": 403,
+            "ok": 403,
+            "failed": 0,
+            "percent": 100
+        },
+        "KU_MOOC": {
+            "checked": 6,
+            "ok": 6,
+            "failed": 0,
+            "percent": 100
+        }
+    },
+    "failures": [
+        {
+            "url": "https://research.ku.ac.th/forest/Project.aspx?ProjectNumber=1140021005&BudgetYear=2010",
+            "source": "KU_Forest",
+            "status": 500,
+            "error": null
+        }
+    ]
+}
