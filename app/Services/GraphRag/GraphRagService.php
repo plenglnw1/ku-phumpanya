@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\GraphRag;
 
 use App\Services\GraphRag\Agent\AgentPipeline;
+use App\Services\GraphRag\Agent\ResultFormatter;
 use Illuminate\Support\Str;
 
 final class GraphRagService
@@ -25,7 +26,7 @@ final class GraphRagService
     }
 
     /**
-     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>, tier?: string, _meta?: array<string, mixed>}
+     * @return array{title: string, overview: array<string, string>, knowledge_graph: array<string, mixed>, learning_path: array<string, mixed>, evidence: list<array<string, mixed>>, tags: array{bcg_pillars: list<string>, faculties: list<string>}, tier?: string, _meta?: array<string, mixed>}
      */
     public function search(string $query): array
     {
@@ -34,6 +35,21 @@ final class GraphRagService
         }
 
         return $this->legacySearch($query);
+    }
+
+    public function synthesizesAsync(): bool
+    {
+        return (bool) config('gemini.enabled') && (bool) config('gemini.async_synthesis');
+    }
+
+    /**
+     * Retrieval-only result (status "pending") to show while search() synthesizes.
+     *
+     * @return array<string, mixed>
+     */
+    public function draft(string $query): array
+    {
+        return $this->agentPipeline->draft($query);
     }
 
     /**
@@ -81,6 +97,7 @@ final class GraphRagService
             'knowledge_graph' => $graph,
             'learning_path' => $this->toLearningPath($paths),
             'evidence' => $this->toEvidence($documents),
+            'tags' => ResultFormatter::tags($documents),
             '_meta' => [
                 'docs_retrieved' => count($documents),
                 'relations_retrieved' => 0,

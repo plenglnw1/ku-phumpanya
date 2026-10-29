@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\SearchLogController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
 use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ConsentController;
 use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LearningProgressController;
 use App\Http\Controllers\Api\ProfileController;
@@ -24,10 +25,16 @@ Route::post('/auth/login', [SessionController::class, 'login']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+
+        return array_merge($user->toArray(), [
+            'consent_required' => $user->consented_at === null
+                || $user->consent_version !== (string) config('pdpa.consent_version'),
+        ]);
     });
 
     Route::post('/auth/register/complete', [AuthController::class, 'completeRegistration']);
+    Route::post('/consent', [ConsentController::class, 'store']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::middleware(['admin'])->prefix('admin')->group(function () {
@@ -44,6 +51,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/search/recent', [SearchController::class, 'clear']);
         Route::get('/search/suggestions', [SearchController::class, 'suggestions']);
         Route::get('/search/history/{searchHistory}', [SearchController::class, 'show']);
+        Route::get('/progress', [LearningProgressController::class, 'index']);
         Route::get('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'show']);
         Route::put('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'update']);
 

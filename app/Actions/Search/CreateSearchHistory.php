@@ -23,7 +23,9 @@ final class CreateSearchHistory
         $caught = null;
 
         try {
-            $result = $this->graphRag->search($query);
+            $result = $this->graphRag->synthesizesAsync()
+                ? $this->graphRag->draft($query)
+                : $this->graphRag->search($query);
         } catch (Throwable $e) {
             $status = 'error';
             $caught = $e;

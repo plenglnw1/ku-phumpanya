@@ -21,4 +21,9 @@ return [
     // 0 turns 2.5 "thinking" off: it multiplies latency and its tokens count against
     // max_output_tokens. Empty leaves the model default.
     'thinking_budget' => env('GEMINI_THINKING_BUDGET', 0),
+
+    // POST /api/search answers with a retrieval-only draft (status "pending") and the
+    // Gemini synthesis runs on the next GET of that history, so the first paint does
+    // not wait on the model.
+    'async_synthesis' => (bool) env('GEMINI_ASYNC_SYNTHESIS', false),
 ];

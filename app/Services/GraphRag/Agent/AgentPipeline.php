@@ -7,7 +7,9 @@ namespace App\Services\GraphRag\Agent;
 use App\Services\GraphRag\Agent\Tiers\AdvancedGenerator;
 use App\Services\GraphRag\Agent\Tiers\BasicGenerator;
 use App\Services\GraphRag\Agent\Tiers\IntermediateGenerator;
+use App\Services\GraphRag\RelationGraphBuilder;
 use App\Services\GraphRag\RetrievalLinker;
+use Illuminate\Support\Str;
 
 /**
  * EllieSQL-style 3-phase pipeline:
@@ -23,7 +25,52 @@ final class AgentPipeline
         private readonly AdvancedGenerator $advanced,
         private readonly GeminiClient $gemini,
         private readonly Synthesizer $synthesizer,
+        private readonly RelationGraphBuilder $graphBuilder,
     ) {}
+
+    /**
+     * Retrieval-only result with no Gemini call: same shape as run(), marked
+     * status "pending" so the caller knows the synthesis is still to come.
+     *
+     * @return array<string, mixed>
+     */
+    public function draft(string $query): array
+    {
+        $retrievalStart = microtime(true);
+        $context = $this->linker->link($query);
+        $retrievalMs = (int) round((microtime(true) - $retrievalStart) * 1000);
+
+        $docs = $context['docs'];
+        $extracted = [
+            'key_points' => collect($docs)->take(3)->map(
+                fn (array $d): string => Str::limit((string) ($d['title'] ?? ''), 80),
+            )->filter()->values()->all(),
+            'entities' => array_slice($context['entities'], 0, 5),
+            'courses' => [],
+        ];
+        $heuristic = $this->synthesizer->fallbackSynthesize(
+            $query,
+            $extracted,
+            $docs,
+            (string) ($docs[0]['title'] ?? Str::title($query)),
+        );
+
+        return [
+            'title' => $heuristic['title'],
+            'overview' => $heuristic['overview'],
+            'knowledge_graph' => $this->graphBuilder->build(array_slice($context['entities'], 0, 5), $context['relations'], 15, 20),
+            'learning_path' => ResultFormatter::normalizeLearningPath(null, $this->synthesizer->groupIntoPhases($docs)),
+            'evidence' => ResultFormatter::toEvidence($docs),
+            'tags' => ResultFormatter::tags($docs),
+            'status' => 'pending',
+            '_meta' => [
+                'docs_retrieved' => count($docs),
+                'relations_retrieved' => count($context['relations']),
+                'sub_queries' => [],
+                'timing' => ['retrieval_ms' => $retrievalMs, 'synthesis_ms' => 0],
+            ],
+        ];
+    }
 
     /**
      * @return array{title: string, overview: array, knowledge_graph: array, learning_path: array, evidence: list, tier: string, _meta: array}
@@ -57,6 +104,8 @@ final class AgentPipeline
         unset($result['_sub_queries']);
 
         return array_merge($result, [
+            'tags' => ResultFormatter::tags($context['docs']),
+            'status' => 'ready',
             'tier' => $tier,
             '_meta' => [
                 'reason' => $route['reason'],
