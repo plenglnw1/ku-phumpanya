@@ -21,6 +21,16 @@ class ResultFormatterTagsTest extends TestCase
         $this->assertSame(['วนศาสตร์', 'เกษตร'], $tags['faculties']);
     }
 
+    public function test_resolves_faculties_from_topic_ids(): void
+    {
+        $tags = ResultFormatter::tags(
+            [['bcg_pillars' => ['Green'], 'topic_ids' => ['5']], ['topic_ids' => ['5', '6']]],
+            ['5' => ['ประมง', 'อุตสาหกรรมเกษตร'], '6' => ['วนศาสตร์']],
+        );
+
+        $this->assertSame(['ประมง', 'อุตสาหกรรมเกษตร', 'วนศาสตร์'], $tags['faculties']);
+    }
+
     public function test_empty_documents_give_empty_tags(): void
     {
         $this->assertSame(['bcg_pillars' => [], 'faculties' => []], ResultFormatter::tags([]));
