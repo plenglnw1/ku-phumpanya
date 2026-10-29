@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Console\Command;
 
@@ -19,6 +20,7 @@ final class PurgeDemoUsers extends Command
     {
         $users = User::query()
             ->where('email', 'like', '%'.self::DEMO_EMAIL_DOMAIN)
+            ->where('role', '!=', UserRole::Admin)
             ->get(['id', 'email']);
 
         if ($users->isEmpty()) {

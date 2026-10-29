@@ -26,6 +26,7 @@ class GoogleAuthTest extends TestCase
 
         $this->assertSame('openid email', $query['scope']);
         $this->assertStringNotContainsString('profile', $query['scope']);
+        $this->assertSame('select_account', $query['prompt']);
     }
 
     public function test_google_callback_creates_user_and_redirects_to_profile_completion(): void

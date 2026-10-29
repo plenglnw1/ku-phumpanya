@@ -27,7 +27,7 @@ class AdminPanelAccessTest extends TestCase
         $response->assertRedirect(config('app.url').'/filament');
     }
 
-    public function test_non_admin_cannot_access_filament_panel(): void
+    public function test_non_admin_is_signed_out_and_sent_to_the_panel_login(): void
     {
         $student = User::factory()->create([
             'role' => UserRole::Student,
@@ -35,11 +35,10 @@ class AdminPanelAccessTest extends TestCase
 
         $this->actingAs($student)
             ->get('/filament')
-            ->assertForbidden();
+            ->assertRedirect('/filament/login');
 
-        $this->actingAs($student)
-            ->get(route('search.index'))
-            ->assertOk();
+        $this->assertGuest();
+        $this->get('/filament/login')->assertOk();
     }
 
     public function test_guest_is_sent_to_the_panel_login_page(): void
