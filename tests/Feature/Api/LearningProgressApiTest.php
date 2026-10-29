@@ -139,4 +139,36 @@ class LearningProgressApiTest extends TestCase
 
         $this->getJson("/api/search/history/{$history->id}/progress")->assertUnauthorized();
     }
+
+    public function test_index_summarises_only_the_users_roadmaps(): void
+    {
+        $user = User::factory()->create();
+        $history = $this->roadmapFor($user);
+        $this->roadmapFor(User::factory()->create());
+        SearchHistory::query()->create(['user_id' => $user->id, 'query' => 'no roadmap', 'result' => null]);
+        LearningProgress::query()->create([
+            'user_id' => $user->id,
+            'search_history_id' => $history->id,
+            'phase_index' => 1,
+            'card_index' => 0,
+            'completed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/progress')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $history->id)
+            ->assertJsonPath('data.0.title', 'Microplastics')
+            ->assertJsonPath('data.0.percent', 33)
+            ->assertJson(['summary' => [
+                'roadmaps' => 1,
+                'started' => 1,
+                'finished' => 0,
+                'completed_count' => 1,
+                'total' => 3,
+                'percent' => 33,
+            ]]);
+    }
 }

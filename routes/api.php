@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/search/recent', [SearchController::class, 'clear']);
         Route::get('/search/suggestions', [SearchController::class, 'suggestions']);
         Route::get('/search/history/{searchHistory}', [SearchController::class, 'show']);
+        Route::get('/progress', [LearningProgressController::class, 'index']);
         Route::get('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'show']);
         Route::put('/search/history/{searchHistory}/progress', [LearningProgressController::class, 'update']);
 

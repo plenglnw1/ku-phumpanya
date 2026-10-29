@@ -27,6 +27,38 @@ final class ResultFormatter
     }
 
     /**
+     * BCG pillars and pilot faculties of the retrieved documents, most frequent first.
+     *
+     * @param  list<array<string, mixed>>  $documents
+     * @return array{bcg_pillars: list<string>, faculties: list<string>}
+     */
+    public static function tags(array $documents): array
+    {
+        $count = static fn (string ...$keys): array => collect($documents)
+            ->flatMap(static function (array $doc) use ($keys): array {
+                foreach ($keys as $key) {
+                    if (! empty($doc[$key]) && is_array($doc[$key])) {
+                        return array_values(array_unique(array_map('strval', $doc[$key])));
+                    }
+                }
+
+                return [];
+            })
+            ->filter(static fn (string $tag): bool => trim($tag) !== '')
+            ->countBy()
+            ->sortDesc()
+            ->keys()
+            ->map(static fn ($tag): string => (string) $tag)
+            ->values()
+            ->all();
+
+        return [
+            'bcg_pillars' => $count('bcg_tags', 'bcg_pillars'),
+            'faculties' => $count('faculty_tags', 'faculties'),
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>|null  $learningPath
      * @param  list<array<string, mixed>>  $fallbackPhases  Already-built phases (e.g.
      *         Synthesizer::groupIntoPhases on this query's own retrieved docs) — used

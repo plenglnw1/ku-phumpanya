@@ -57,6 +57,7 @@ final class AgentPipeline
         unset($result['_sub_queries']);
 
         return array_merge($result, [
+            'tags' => ResultFormatter::tags($context['docs']),
             'tier' => $tier,
             '_meta' => [
                 'reason' => $route['reason'],

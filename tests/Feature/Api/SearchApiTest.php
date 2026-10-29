@@ -133,6 +133,26 @@ class SearchApiTest extends TestCase
             ]);
     }
 
+    public function test_recent_is_newest_first_and_skips_failed_searches(): void
+    {
+        $user = User::factory()->create();
+        $sameSecond = now()->subMinute();
+        $older = SearchHistory::query()->create(['user_id' => $user->id, 'query' => 'older']);
+        $older->forceFill(['created_at' => now()->subHour()])->save();
+        $first = SearchHistory::query()->create(['user_id' => $user->id, 'query' => 'first']);
+        $second = SearchHistory::query()->create(['user_id' => $user->id, 'query' => 'second']);
+        foreach ([$first, $second] as $row) {
+            $row->forceFill(['created_at' => $sameSecond])->save();
+        }
+        SearchHistory::query()->create(['user_id' => $user->id, 'query' => 'boom', 'status' => 'error']);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/search/recent')
+            ->assertOk()
+            ->assertJsonPath('data.*.query', ['second', 'first', 'older']);
+    }
+
     public function test_get_suggestions_returns_list(): void
     {
         Sanctum::actingAs(User::factory()->create());

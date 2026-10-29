@@ -62,9 +62,13 @@ final class SearchController extends Controller
 
     public function recent(Request $request): AnonymousResourceCollection
     {
+        // Failed searches stay in the table for the admin search log but are not
+        // something the user can reopen.
         $histories = SearchHistory::query()
             ->where('user_id', $request->user()->id)
+            ->where('status', '!=', 'error')
             ->latest()
+            ->orderByDesc('id')
             ->limit(10)
             ->get();
 

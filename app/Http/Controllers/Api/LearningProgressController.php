@@ -22,6 +22,52 @@ use Illuminate\Validation\ValidationException;
  */
 final class LearningProgressController extends Controller
 {
+    /**
+     * Progress across the user's roadmaps, newest first, for the Progress page.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        $roadmaps = SearchHistory::query()
+            ->where('user_id', $userId)
+            ->where('status', '!=', 'error')
+            ->latest()
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->map(function (SearchHistory $history) use ($userId): array {
+                $state = $this->state($history, $userId);
+
+                return [
+                    'id' => $history->id,
+                    'query' => $history->query,
+                    'title' => is_array($history->result) ? ($history->result['title'] ?? null) : null,
+                    'completed_count' => $state['completed_count'],
+                    'total' => $state['total'],
+                    'percent' => $state['percent'],
+                    'created_at' => $history->created_at,
+                ];
+            })
+            ->filter(fn (array $roadmap): bool => $roadmap['total'] > 0)
+            ->values();
+
+        $completed = $roadmaps->sum('completed_count');
+        $total = $roadmaps->sum('total');
+
+        return response()->json([
+            'data' => $roadmaps->all(),
+            'summary' => [
+                'roadmaps' => $roadmaps->count(),
+                'started' => $roadmaps->where('completed_count', '>', 0)->count(),
+                'finished' => $roadmaps->filter(fn (array $r): bool => $r['completed_count'] === $r['total'])->count(),
+                'completed_count' => $completed,
+                'total' => $total,
+                'percent' => $total > 0 ? (int) round($completed / $total * 100) : 0,
+            ],
+        ]);
+    }
+
     public function show(Request $request, SearchHistory $searchHistory): JsonResponse
     {
         abort_unless($searchHistory->user_id === $request->user()->id, 403);
