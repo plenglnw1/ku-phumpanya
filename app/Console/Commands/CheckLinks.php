@@ -19,11 +19,15 @@ use Throwable;
  * URLs come from the Elasticsearch corpus, the seed config and the evidence and
  * modules of stored search results. Unlike the KU-BCG crawler check this keeps
  * going after a failure, so the report gives a pass rate per source.
+ *
+ * Run it off the KU server (--corpus with the KU-BCG export): it holds hundreds of
+ * outbound requests open, and on the 4 GB KU host that starved Elasticsearch.
  */
 final class CheckLinks extends Command
 {
     protected $signature = 'links:check
         {--source= : Only check one source (KU_Forest, KUKR, KU_MOOC)}
+        {--corpus= : Read corpus URLs from an Elasticsearch export (KU-BCG elastic-search/data/all_docs.json) instead of the live index}
         {--limit=0 : Stop after this many URLs (0 = all)}
         {--concurrency=4 : Parallel requests per batch}
         {--delay=500 : Milliseconds between batches, to stay polite to the KU sites}';
@@ -119,8 +123,14 @@ final class CheckLinks extends Command
             }
         };
 
-        $client = $factory->make();
-        if ($client !== null) {
+        $corpus = $this->option('corpus');
+        $client = $corpus === null ? $factory->make() : null;
+        if ($corpus !== null) {
+            $export = json_decode((string) file_get_contents($corpus), true);
+            foreach ($export['hits']['hits'] ?? [] as $hit) {
+                $add($hit['_source']['url'] ?? null, $hit['_source']['source'] ?? null);
+            }
+        } elseif ($client !== null) {
             $hits = $client->search([
                 'index' => config('elasticsearch.indices.docs'),
                 'body' => ['size' => 2000, '_source' => ['url', 'source'], 'query' => ['match_all' => (object) []]],
