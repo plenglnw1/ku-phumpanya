@@ -10,10 +10,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | When true, Blade /login and POST /api/auth/login accept email/password.
-    | Google OAuth remains the primary path either way.
+    | Google OAuth remains the primary path either way. Off unless set: the
+    | Next frontend only signs in with Google.
     |
     */
-    'password_login_enabled' => env('AUTH_PASSWORD_LOGIN_ENABLED', true),
+    'password_login_enabled' => env('AUTH_PASSWORD_LOGIN_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------

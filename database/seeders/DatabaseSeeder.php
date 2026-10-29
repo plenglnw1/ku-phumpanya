@@ -13,6 +13,12 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction()) {
+            $this->command?->warn('Skipping demo seed: these accounts share a known password.');
+
+            return;
+        }
+
         $users = [
             [
                 'name' => 'Admin User',

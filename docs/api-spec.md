@@ -83,7 +83,7 @@ KU Phumpanya เป็นแพลตฟอร์มค้นหาและเ�
 
 ### Password login (SSR only, disabled by default)
 
-`AUTH_PASSWORD_ENABLED=false` → `/login` redirect ไป welcome. เปิดได้ผ่าน `.env`
+`AUTH_PASSWORD_LOGIN_ENABLED=false` → `/login` redirect ไป welcome. เปิดได้ผ่าน `.env`
 
 ### Authorization rules
 
@@ -987,7 +987,7 @@ await api.get('/sanctum/csrf-cookie');
 |----------|---------|---------|
 | `APP_URL` | `http://localhost` | API base |
 | `FRONTEND_URL` | `http://localhost:3000` | CORS origin |
-| `AUTH_PASSWORD_ENABLED` | `false` | ปิด email/password login |
+| `AUTH_PASSWORD_LOGIN_ENABLED` | `false` | ปิด email/password login |
 | `GEMINI_ENABLED` | `true` | agent vs legacy |
 
 ### 7. Data corpus (อ้างอิง)

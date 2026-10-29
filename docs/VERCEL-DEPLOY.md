@@ -51,9 +51,6 @@ Do **not** set `REDIS_HOST=redis` unless you add Upstash + `predis/predis`.
 4. Redeploy after `vercel.json` changes
 5. Temporarily `APP_DEBUG=true` to see error (turn off after)
 
-## Demo logins
+## Logins
 
-| Email | Password |
-|-------|----------|
-| `student@phumpanya.test` | `password` |
-| `admin@phumpanya.test` | `password` |
+Google only. The `@phumpanya.test` demo accounts are for local/staging seeds; `db:seed` skips them when `APP_ENV=production`.

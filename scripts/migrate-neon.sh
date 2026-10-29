@@ -108,9 +108,5 @@ cat <<'EOF'
 
 ==> Done.
 
-Demo accounts (password: password):
-  admin@phumpanya.test      → /admin
-  student@phumpanya.test    → /search
-  researcher@phumpanya.test
-  teacher@phumpanya.test
+Demo accounts (@phumpanya.test) are seeded only outside APP_ENV=production.
 EOF

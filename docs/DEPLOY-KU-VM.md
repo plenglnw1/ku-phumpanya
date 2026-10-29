@@ -184,12 +184,9 @@ Rebuild the Vercel app with `NEXT_PUBLIC_API_URL=https://phumpanya.ku.ac.th` (mu
 
 ---
 
-## Demo logins
+## Logins
 
-| Email | Password |
-|-------|----------|
-| `student@phumpanya.test` | `password` |
-| `admin@phumpanya.test` | `password` → `/admin` |
+Google only (`AUTH_PASSWORD_LOGIN_ENABLED=false`, forced by the deploy script). The seeded `@phumpanya.test` demo accounts share a known password, so the deploy runs `php artisan app:purge-demo-users` and `db:seed` refuses to create them in production. Grant admin by setting `role=admin` on a real Google account.
 
 ---
 
