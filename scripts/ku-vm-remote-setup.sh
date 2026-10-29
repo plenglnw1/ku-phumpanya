@@ -76,7 +76,10 @@ apply_ku_env_baseline() {
   local frontend_url_target
   local qdrant_host qdrant_key qdrant_embed gemini_key
 
-  env_set "ELASTICSEARCH_ENABLED" "false"
+  # Elasticsearch runs on the host from ~/es-kg (KU-BCG deploy/es-ku); keep an explicit choice.
+  if [ -z "$(env_get ELASTICSEARCH_ENABLED)" ]; then
+    env_set "ELASTICSEARCH_ENABLED" "false"
+  fi
   env_set "APP_URL" "https://phumpanya.ku.ac.th"
   env_set "GOOGLE_REDIRECT_URI" "${GOOGLE_REDIRECT_URI:-https://phumpanya.ku.ac.th/auth/google/callback}"
 

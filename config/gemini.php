@@ -17,4 +17,8 @@ return [
     'max_output_tokens' => (int) env('GEMINI_MAX_OUTPUT_TOKENS', 2048),
     'temperature' => (float) env('GEMINI_TEMPERATURE', 0.3),
     'force_tier' => env('GEMINI_FORCE_TIER', ''),
+
+    // 0 turns 2.5 "thinking" off: it multiplies latency and its tokens count against
+    // max_output_tokens. Empty leaves the model default.
+    'thinking_budget' => env('GEMINI_THINKING_BUDGET', 0),
 ];

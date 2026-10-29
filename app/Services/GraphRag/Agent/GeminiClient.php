@@ -40,11 +40,11 @@ final class GeminiClient
             return null;
         }
 
+        // The key goes in a header: a URL query string ends up in exception messages and logs.
         $url = sprintf(
-            '%s/models/%s:generateContent?key=%s',
+            '%s/models/%s:generateContent',
             rtrim((string) config('gemini.base_url'), '/'),
             $model,
-            config('gemini.api_key'),
         );
 
         $generationConfig = [
@@ -57,8 +57,14 @@ final class GeminiClient
             $generationConfig['responseSchema'] = $responseSchema;
         }
 
+        $thinkingBudget = config('gemini.thinking_budget');
+        if ($thinkingBudget !== null && $thinkingBudget !== '') {
+            $generationConfig['thinkingConfig'] = ['thinkingBudget' => (int) $thinkingBudget];
+        }
+
         try {
             $response = Http::connectTimeout(5)
+                ->withHeaders(['x-goog-api-key' => (string) config('gemini.api_key')])
                 ->timeout((int) config('gemini.timeout', 20))
                 ->post($url, [
                     'contents' => [

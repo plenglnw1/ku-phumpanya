@@ -38,7 +38,7 @@ final class HybridRetriever
             $response = $client->search([
                 'index' => $index,
                 'body' => [
-                    'size' => $size,
+                    'size' => max($size * 5, 30),
                     'query' => [
                         'multi_match' => [
                             'query' => $query,
@@ -65,10 +65,50 @@ final class HybridRetriever
             return $this->fallbackRetrieve($query, $size);
         }
 
-        return array_map(
+        return self::interleaveSources(array_map(
             static fn (array $hit): array => array_merge(['_score' => $hit['_score'] ?? 0.0], $hit['_source'] ?? []),
             $response['hits']['hits'] ?? [],
-        );
+        ), $size);
+    }
+
+    /**
+     * Best hits round-robin across sources, so evidence is not all KUKR (403 of the
+     * 612 documents) whenever KUKR wins on score.
+     *
+     * Only hits scoring at least `$minRatio` of the top hit take part, so a source with
+     * no good match is left out instead of padded in with an unrelated document.
+     *
+     * @param  list<array<string, mixed>>  $hits  ordered by score, descending
+     * @return list<array<string, mixed>>
+     */
+    public static function interleaveSources(array $hits, int $size, float $minRatio = 0.3): array
+    {
+        if ($hits === []) {
+            return [];
+        }
+
+        $floor = (float) ($hits[0]['_score'] ?? 0.0) * $minRatio;
+        $bySource = [];
+        foreach ($hits as $hit) {
+            if ((float) ($hit['_score'] ?? 0.0) >= $floor) {
+                $bySource[(string) ($hit['source'] ?? '')][] = $hit;
+            }
+        }
+
+        $picked = [];
+        while (count($picked) < $size && $bySource !== []) {
+            foreach (array_keys($bySource) as $source) {
+                $picked[] = array_shift($bySource[$source]);
+                if ($bySource[$source] === []) {
+                    unset($bySource[$source]);
+                }
+                if (count($picked) === $size) {
+                    break;
+                }
+            }
+        }
+
+        return $picked;
     }
 
     /**
