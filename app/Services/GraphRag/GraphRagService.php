@@ -97,7 +97,7 @@ final class GraphRagService
             'knowledge_graph' => $graph,
             'learning_path' => $this->toLearningPath($paths),
             'evidence' => $this->toEvidence($documents),
-            'tags' => ResultFormatter::tags($documents),
+            'tags' => ResultFormatter::tags($documents, config('bcg_topics.faculties', [])),
             '_meta' => [
                 'docs_retrieved' => count($documents),
                 'relations_retrieved' => 0,

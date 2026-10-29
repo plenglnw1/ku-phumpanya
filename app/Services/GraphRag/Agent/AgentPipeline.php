@@ -61,7 +61,7 @@ final class AgentPipeline
             'knowledge_graph' => $this->graphBuilder->build(array_slice($context['entities'], 0, 5), $context['relations'], 15, 20),
             'learning_path' => ResultFormatter::normalizeLearningPath(null, $this->synthesizer->groupIntoPhases($docs)),
             'evidence' => ResultFormatter::toEvidence($docs),
-            'tags' => ResultFormatter::tags($docs),
+            'tags' => ResultFormatter::tags($docs, config('bcg_topics.faculties', [])),
             'status' => 'pending',
             '_meta' => [
                 'docs_retrieved' => count($docs),
@@ -104,7 +104,7 @@ final class AgentPipeline
         unset($result['_sub_queries']);
 
         return array_merge($result, [
-            'tags' => ResultFormatter::tags($context['docs']),
+            'tags' => ResultFormatter::tags($context['docs'], config('bcg_topics.faculties', [])),
             'status' => 'ready',
             'tier' => $tier,
             '_meta' => [

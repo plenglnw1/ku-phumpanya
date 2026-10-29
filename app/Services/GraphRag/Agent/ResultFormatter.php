@@ -30,10 +30,24 @@ final class ResultFormatter
      * BCG pillars and pilot faculties of the retrieved documents, most frequent first.
      *
      * @param  list<array<string, mixed>>  $documents
+     * @param  array<string, list<string>>  $topicFaculties  topic id => faculties, for
+     *                                                       documents that carry `topic_ids` but no faculty field
      * @return array{bcg_pillars: list<string>, faculties: list<string>}
      */
-    public static function tags(array $documents): array
+    public static function tags(array $documents, array $topicFaculties = []): array
     {
+        $documents = array_map(static function (array $doc) use ($topicFaculties): array {
+            if (empty($doc['faculty_tags']) && empty($doc['faculties'])) {
+                $faculties = [];
+                foreach ((array) ($doc['topic_ids'] ?? []) as $id) {
+                    array_push($faculties, ...($topicFaculties[(string) $id] ?? []));
+                }
+                $doc['faculties'] = $faculties;
+            }
+
+            return $doc;
+        }, $documents);
+
         $count = static fn (string ...$keys): array => collect($documents)
             ->flatMap(static function (array $doc) use ($keys): array {
                 foreach ($keys as $key) {
@@ -61,8 +75,8 @@ final class ResultFormatter
     /**
      * @param  array<string, mixed>|null  $learningPath
      * @param  list<array<string, mixed>>  $fallbackPhases  Already-built phases (e.g.
-     *         Synthesizer::groupIntoPhases on this query's own retrieved docs) — used
-     *         as-is, never re-ranked, so the fallback is guaranteed on-topic.
+     *                                                      Synthesizer::groupIntoPhases on this query's own retrieved docs) — used
+     *                                                      as-is, never re-ranked, so the fallback is guaranteed on-topic.
      * @return array<string, mixed>
      */
     public static function normalizeLearningPath(?array $learningPath, array $fallbackPhases = []): array
@@ -97,7 +111,7 @@ final class ResultFormatter
             $source = $doc['source'] ?? '';
             $content = Str::limit((string) ($doc['content'] ?? $doc['abstract'] ?? ''), 200);
 
-            return sprintf("[%d] %s (%s): %s", $i + 1, $title, $source, $content);
+            return sprintf('[%d] %s (%s): %s', $i + 1, $title, $source, $content);
         })->implode("\n");
     }
 
