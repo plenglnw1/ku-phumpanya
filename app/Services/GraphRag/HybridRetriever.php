@@ -59,16 +59,46 @@ final class HybridRetriever
                             'type' => 'best_fields',
                         ],
                     ],
+                    // Best hits of each source as well: KU MOOC is 6 of 612 documents
+                    // and rarely reaches the global top hits even when it matches.
+                    'aggs' => [
+                        'by_source' => [
+                            'terms' => ['field' => 'source', 'size' => 5],
+                            'aggs' => ['top' => ['top_hits' => ['size' => $size]]],
+                        ],
+                    ],
                 ],
             ])->asArray();
         } catch (\Throwable) {
             return $this->fallbackRetrieve($query, $size);
         }
 
-        return self::interleaveSources(array_map(
-            static fn (array $hit): array => array_merge(['_score' => $hit['_score'] ?? 0.0], $hit['_source'] ?? []),
-            $response['hits']['hits'] ?? [],
-        ), $size);
+        return self::interleaveSources(self::mergeSourceBuckets($response), $size);
+    }
+
+    /**
+     * Global hits plus each source's top hits, de-duplicated and ordered by score.
+     *
+     * @param  array<string, mixed>  $response
+     * @return list<array<string, mixed>>
+     */
+    public static function mergeSourceBuckets(array $response): array
+    {
+        $hits = $response['hits']['hits'] ?? [];
+        foreach ($response['aggregations']['by_source']['buckets'] ?? [] as $bucket) {
+            array_push($hits, ...($bucket['top']['hits']['hits'] ?? []));
+        }
+
+        $merged = [];
+        foreach ($hits as $hit) {
+            $key = (string) ($hit['_id'] ?? $hit['_source']['url'] ?? spl_object_id((object) $hit));
+            $merged[$key] ??= array_merge(['_score' => (float) ($hit['_score'] ?? 0.0)], $hit['_source'] ?? []);
+        }
+
+        $merged = array_values($merged);
+        usort($merged, static fn (array $a, array $b): int => $b['_score'] <=> $a['_score']);
+
+        return $merged;
     }
 
     /**
@@ -195,4 +225,3 @@ final class HybridRetriever
             ->all();
     }
 }
-

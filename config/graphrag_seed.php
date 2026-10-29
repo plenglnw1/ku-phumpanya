@@ -16,8 +16,8 @@ return [
             'bcg_tags' => ['Green'],
             'faculty_tags' => ['วนศาสตร์', 'เกษตร', 'อุตสาหกรรมเกษตร', 'ประมง'],
             'sources' => [
-                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=Climate%20change', 'section' => 'keyword'],
-                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
+                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Project.aspx?ProjectNumber=1631188000&BudgetYear=2016', 'section' => 'project'],
+                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Detail/info/20020334', 'section' => 'detail'],
                 ['source' => 'KU_MOOC', 'url' => 'https://kumooc.ku.th/courses/6/info', 'section' => 'course'],
             ],
             'courses' => [
@@ -32,8 +32,8 @@ return [
             'bcg_tags' => ['Green', 'Circular'],
             'faculty_tags' => ['ประมง', 'อุตสาหกรรมเกษตร', 'เกษตร'],
             'sources' => [
-                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=water%20quality', 'section' => 'keyword'],
-                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
+                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Project.aspx?ProjectNumber=2040055003&BudgetYear=2020', 'section' => 'project'],
+                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Detail/info/448215', 'section' => 'detail'],
                 ['source' => 'KU_MOOC', 'url' => 'https://kumooc.ku.th/courses/82/info', 'section' => 'course'],
             ],
             'courses' => [
@@ -48,14 +48,13 @@ return [
             'bcg_tags' => ['Bio', 'Circular'],
             'faculty_tags' => ['ประมง', 'อุตสาหกรรมเกษตร', 'เกษตร'],
             'sources' => [
-                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Search.aspx?keyword=chitosan', 'section' => 'keyword'],
-                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Search', 'section' => 'search'],
-                ['source' => 'KU_MOOC', 'url' => 'https://kumooc.ku.th/courses/list/10', 'section' => 'category'],
+                ['source' => 'KU_Forest', 'url' => 'https://research.ku.ac.th/forest/Project.aspx?ProjectNumber=2630485000&BudgetYear=2026', 'section' => 'project'],
+                ['source' => 'KUKR', 'url' => 'https://kukr.lib.ku.ac.th/KUKR/Detail/info/20020747', 'section' => 'detail'],
+                ['source' => 'KU_MOOC', 'url' => 'https://kumooc.ku.th/courses/84/info', 'section' => 'course'],
             ],
             'courses' => [
-                ['course_id' => 'kumooc010', 'title' => 'พื้นฐานเคมีและวัสดุสำหรับบรรจุภัณฑ์', 'url' => 'https://kumooc.ku.th/courses/list/10'],
+                ['course_id' => 'kumooc026', 'title' => 'เศรษฐศาสตร์การจัดการมลพิษและของเสีย', 'url' => 'https://kumooc.ku.th/courses/84/info'],
             ],
         ],
     ],
 ];
-

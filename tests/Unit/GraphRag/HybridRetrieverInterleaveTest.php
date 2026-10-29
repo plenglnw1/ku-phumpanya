@@ -38,6 +38,22 @@ class HybridRetrieverInterleaveTest extends TestCase
         $this->assertSame(['k1', 'k2'], array_column($picked, 'id'));
     }
 
+    public function test_source_buckets_add_hits_missing_from_the_global_top(): void
+    {
+        $esHit = fn (string $id, string $source, float $score): array => ['_id' => $id, '_score' => $score, '_source' => ['id' => $id, 'source' => $source]];
+
+        $merged = HybridRetriever::mergeSourceBuckets([
+            'hits' => ['hits' => [$esHit('k1', 'KUKR', 10.0), $esHit('k2', 'KUKR', 9.0)]],
+            'aggregations' => ['by_source' => ['buckets' => [
+                ['key' => 'KUKR', 'top' => ['hits' => ['hits' => [$esHit('k1', 'KUKR', 10.0)]]]],
+                ['key' => 'KU_MOOC', 'top' => ['hits' => ['hits' => [$esHit('m1', 'KU_MOOC', 4.0)]]]],
+            ]]],
+        ]);
+
+        $this->assertSame(['k1', 'k2', 'm1'], array_column($merged, 'id'));
+        $this->assertSame(['k1', 'm1', 'k2'], array_column(HybridRetriever::interleaveSources($merged, 3), 'id'));
+    }
+
     public function test_returns_nothing_for_no_hits(): void
     {
         $this->assertSame([], HybridRetriever::interleaveSources([], 6));

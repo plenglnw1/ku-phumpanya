@@ -7,7 +7,7 @@ namespace App\Services\GraphRag;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 
-final class ElasticClientFactory
+class ElasticClientFactory
 {
     public function make(): ?Client
     {
@@ -32,4 +32,3 @@ final class ElasticClientFactory
         return $builder->build();
     }
 }
-
