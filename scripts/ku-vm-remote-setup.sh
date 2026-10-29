@@ -81,6 +81,7 @@ apply_ku_env_baseline() {
     env_set "ELASTICSEARCH_ENABLED" "false"
   fi
   env_set "APP_URL" "https://phumpanya.ku.ac.th"
+  env_set "AUTH_PASSWORD_LOGIN_ENABLED" "false"
   env_set "GOOGLE_REDIRECT_URI" "${GOOGLE_REDIRECT_URI:-https://phumpanya.ku.ac.th/auth/google/callback}"
 
   if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
@@ -201,6 +202,7 @@ if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
 else
   echo "==> skip db:seed (set SEED_DEMO_DATA=true for first demo bootstrap only)"
 fi
+php artisan app:purge-demo-users --no-interaction
 
 echo "==> web root $HTML_DIR/public (KU Apache DOCUMENT_ROOT)"
 PUBLIC_DIR="$HTML_DIR/public"
@@ -233,6 +235,5 @@ php artisan filament:optimize 2>/dev/null || true
 echo ""
 echo "==> Deploy complete"
 echo "URL: https://phumpanya.ku.ac.th"
-echo "Login: student@phumpanya.test / password"
-echo "Admin: admin@phumpanya.test / password → /admin"
+echo "Login: Google (@ku.th)"
 echo "Logs: $APP_DIR/storage/logs/laravel.log"
