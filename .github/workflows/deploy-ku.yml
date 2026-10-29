@@ -3,6 +3,7 @@ name: Deploy to KU VM
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -19,6 +20,7 @@ jobs:
         with:
           php-version: "8.4"
           tools: composer
+          coverage: pcov
           extensions: mbstring, pdo, pdo_sqlite, openssl, tokenizer, xml, fileinfo, curl, zip, intl, bcmath
 
       - name: Cache Composer dependencies
@@ -36,12 +38,23 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
 
-      - name: Run tests
-        run: php artisan test
+      - name: Run tests with coverage
+        shell: bash
+        run: php artisan test --coverage --min=55 --coverage-clover=clover.xml | tee coverage.txt
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.txt
+            clover.xml
 
   deploy:
     name: Deploy
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:

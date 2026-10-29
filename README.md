@@ -1,58 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# KU Phumpanya (ภูมิปัญญา)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+KU Phumpanya is a BCG knowledge search and learning platform for Kasetsart University. A user asks a question; the platform searches KU Forest research, KUKR documents, and KU MOOC courses, and answers with three views:
 
-## About Laravel
+- an overview synthesised by Gemini,
+- a knowledge graph,
+- a phased learning path with progress tracking.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Production: <https://phumpanya.ku.ac.th>. Sign-in is Google, restricted to `@ku.th`.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+This repository is the Laravel 13 backend: the JSON API, the GraphRAG pipeline, the admin panel, and the deploy scripts. The UI is a Next.js static export in the **KU-BCG** repository; it is merged into `public/` on deploy.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Architecture
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+Browser ── Next static UI (KU-BCG, served from public/)
+   │  session cookie + XSRF (Sanctum)
+   ▼
+Laravel API (/api/*) ──► GraphRAG AgentPipeline
+                           1. RetrievalLinker + HybridRetriever ─► Elasticsearch
+                              (ku_bcg_documents, ku_bcg_relations)
+                           2. QueryRouter ─► basic | intermediate | advanced
+                           3. Tier generator + Synthesizer ─► Gemini (optional, falls back)
+                           4. ResultFormatter (overview, graph, learning path, evidence, tags)
+   │
+   ├── MySQL (users, search_histories, learning_progress, activity_logs)
+   └── Neo4j (knowledge graph explorer at /graph, read-only Cypher)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+On the KU VM, Elasticsearch and Neo4j run as user processes. A cron watchdog runs every 10 minutes.
 
-## Contributing
+## Local development
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+You need PHP 8.3+, Composer, and Node 20+. Elasticsearch, Neo4j, and Gemini are optional; without them, search falls back to the seed config.
 
-## Code of Conduct
+```bash
+composer setup        # install, .env, key, migrate, build assets
+composer dev          # serve + queue + logs + vite
+php artisan test      # PHPUnit (SQLite in memory)
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Key `.env` settings:
 
-## Security Vulnerabilities
+| Variable | Purpose |
+|----------|---------|
+| `ELASTICSEARCH_ENABLED`, `ELASTICSEARCH_HOST` | Retrieval backend |
+| `GEMINI_ENABLED`, `GEMINI_API_KEY` | AI synthesis. Without a key, results are retrieval-only |
+| `GEMINI_ASYNC_SYNTHESIS` | Return the retrieval draft first; synthesise on the next GET |
+| `KG_NEO4J_HTTP_URL`, `KG_NEO4J_USERNAME`, `KG_NEO4J_PASSWORD` | `/graph` explorer |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| `AUTH_PASSWORD_LOGIN_ENABLED` | Off by default. Production uses Google only |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Useful commands
 
-## License
+| Command | What it does |
+|---------|--------------|
+| `php artisan links:check --corpus=../KU-BCG/elastic-search/data/all_docs.json` | Check every corpus, seed, and evidence URL; writes a pass rate per source to `storage/app/private/reports/`. Run it off the KU host |
+| `php artisan app:purge-demo-users` | Delete `@phumpanya.test` demo accounts (runs on every deploy) |
+| `php artisan agent:search "<query>"` | Run the GraphRAG pipeline from the CLI |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Deploy (KU VM)
+
+You need the KU VPN and the deploy SSH key. The full procedure is in [docs/DEPLOY-KU-VM.md](docs/DEPLOY-KU-VM.md).
+
+```bash
+bash scripts/deploy-ku-vm.sh
+```
+
+GitHub Actions runs the test suite with coverage on every pull request. The deploy job cannot reach the KU host from GitHub because it has no VPN, so deploys run from a machine on the VPN.
+
+## Documentation
+
+| Doc | Content |
+|-----|---------|
+| [docs/api-spec.md](docs/api-spec.md) | REST API contract |
+| [docs/ontology-schema.md](docs/ontology-schema.md) | OWL ontology and Neo4j graph schema |
+| [docs/DEPLOY-KU-VM.md](docs/DEPLOY-KU-VM.md) | KU hosting deploy |
+| [docs/RUNBOOK-google-login.md](docs/RUNBOOK-google-login.md) | Google login troubleshooting |
+| [docs/gates/](docs/gates/) | Acceptance gate evidence (1.3–1.5) |

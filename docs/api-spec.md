@@ -1,7 +1,7 @@
 # KU Phumpanya API Specification
 
-**Version:** `1.1.0`  
-**Last updated:** 2026-07-08  
+**Version:** `1.2.0`  
+**Last updated:** 2026-10-29  
 **App:** `ku-phumpanya` (Laravel 13)
 
 ---
@@ -30,7 +30,7 @@
 
 KU Phumpanya เป็นแพลตฟอร์มค้นหาและเรียนรู้งานวิจัย BCG ของมหาวิทยาลัยเกษตรศาสตร์ โดยใช้ **GraphRAG pipeline**:
 
-1. Embed query → Qdrant vector search (docs + relations)
+1. Retrieve: Elasticsearch hybrid search — docs (`ku_bcg_documents`, แบ่งโควตาต่อ source) + relation triples (`ku_bcg_relations`). Neo4j ใช้กับหน้า `/graph` explorer; Qdrant ใช้เฉพาะ local/legacy
 2. Route query tier (`basic` | `intermediate` | `advanced`)
 3. Gemini agent synthesis (ถ้า `GEMINI_ENABLED=true` และ quota พร้อม)
 4. คืนผลลัพธ์ unified shape: overview, knowledge graph, learning path, evidence
@@ -64,7 +64,9 @@ KU Phumpanya เป็นแพลตฟอร์มค้นหาและเ�
 | 3 | `GET` | `/register/complete` | ถ้า `profile_completed_at` เป็น null |
 | 4 | `POST` | `/register/complete` | บันทึก role + คณะ/สาขา |
 
-หลัง OAuth สำเร็จ Laravel ตั้ง **session cookie** (`laravel_session`) + **CSRF cookie** (`XSRF-TOKEN`)
+หลัง OAuth สำเร็จ Laravel ตั้ง **session cookie** (`phumpanya-session` บน KU) + **CSRF cookie** (`XSRF-TOKEN`)
+
+Session บน production: idle timeout 30 นาที, หมดเมื่อปิด browser, ไม่มี remember-me, cookie `secure; httponly; samesite=lax` (ดู `docs/gates/1.5.3-pdpa.md`)
 
 ### SPA: Laravel Sanctum (partial)
 
@@ -83,7 +85,7 @@ KU Phumpanya เป็นแพลตฟอร์มค้นหาและเ�
 
 ### Password login (SSR only, disabled by default)
 
-`AUTH_PASSWORD_LOGIN_ENABLED=false` → `/login` redirect ไป welcome. เปิดได้ผ่าน `.env`
+`AUTH_PASSWORD_LOGIN_ENABLED=false` (default และค่าบน production) → `/login` redirect ไป welcome, `POST /api/auth/login` คืน `403 {"message":"Password login is disabled."}`
 
 ### Authorization rules
 
@@ -104,7 +106,7 @@ KU Phumpanya เป็นแพลตฟอร์มค้นหาและเ�
 Accept: application/json
 Content-Type: application/json
 X-XSRF-TOKEN: {value from XSRF-TOKEN cookie}
-Cookie: laravel_session=...; XSRF-TOKEN=...
+Cookie: phumpanya-session=...; XSRF-TOKEN=...
 ```
 
 ### Pagination
@@ -198,9 +200,6 @@ User:
       type: string
       enum: [admin, student, researcher, teacher]
       nullable: true
-    google_id:
-      type: string
-      nullable: true
     avatar_url:
       type: string
       format: uri
@@ -230,6 +229,15 @@ User:
       type: string
       nullable: true
       description: นักวิจัยเท่านั้น
+    consented_at:
+      type: string
+      format: date-time
+      nullable: true
+      description: เวลายอมรับประกาศความเป็นส่วนตัว (PDPA)
+    consent_version:
+      type: string
+      nullable: true
+      example: "2026-10"
     created_at:
       type: string
       format: date-time
@@ -237,6 +245,8 @@ User:
       type: string
       format: date-time
 ```
+
+`password`, `remember_token` และ `google_id` ไม่ถูกส่งออกใน JSON
 
 ### SearchHistory
 
@@ -289,6 +299,23 @@ GraphRagResult:
       type: string
       enum: [basic, intermediate, advanced]
       description: มีเมื่อ agent pipeline เปิด
+    status:
+      type: string
+      enum: [ready, pending]
+      description: >
+        pending = ผล retrieval-only (draft) ที่ยังไม่ผ่าน Gemini synthesis; มีเฉพาะเมื่อ
+        GEMINI_ASYNC_SYNTHESIS=true. FE เรียก GET /api/search/history/{id} เพื่อรับผล ready
+    tags:
+      type: object
+      description: ป้าย chips — เรียงจากที่พบบ่อยใน evidence มากไปน้อย
+      properties:
+        bcg_pillars:
+          type: array
+          items: { type: string, example: "Bio" }
+        faculties:
+          type: array
+          items: { type: string, example: "วนศาสตร์" }
+          description: map จาก topic_ids ของเอกสารผ่าน config/bcg_topics.php
     _meta:
       $ref: '#/components/schemas/GraphRagMeta'
 ```
@@ -425,15 +452,54 @@ GraphRagMeta:
 SmartPicksResponse:
   type: object
   properties:
-    featured:
+    smart_picks:
+      type: object
+      properties:
+        headline: { type: string, example: "AI Recommendations" }
+        reason: { type: string, description: อธิบายว่าแนะนำจากอะไร (ประวัติค้นหา / คณะ / cold start) }
+        generated_at: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              info: { type: string, example: "2565 · วนศาสตร์ · 4 คำสำคัญ" }
+              source: { type: string, example: "KU Forest" }
+              match: { type: integer, minimum: 45, maximum: 98, description: "% ความเกี่ยวข้องเทียบกับรายการแรก" }
+              reasons: { type: array, items: { type: string }, maxItems: 2 }
+              keywords: { type: array, items: { type: string }, maxItems: 4 }
+              url: { type: string, format: uri }
+              query: { type: string, description: ใช้เป็น query เมื่อกดค้นหาต่อ }
+```
+
+### LearningProgressIndex
+
+```yaml
+LearningProgressIndex:
+  type: object
+  properties:
+    data:
       type: array
       items:
         type: object
         properties:
-          title: { type: string }
-          description: { type: string }
+          id: { type: integer, description: SearchHistory id }
           query: { type: string }
-          badge: { type: string }
+          title: { type: string }
+          completed_count: { type: integer }
+          total: { type: integer }
+          percent: { type: integer }
+          created_at: { type: string, format: date-time }
+    summary:
+      type: object
+      properties:
+        roadmaps: { type: integer }
+        started: { type: integer }
+        finished: { type: integer }
+        completed_count: { type: integer }
+        total: { type: integer }
+        percent: { type: integer }
 ```
 
 ### CompleteRegistrationRequest
@@ -560,7 +626,22 @@ CompleteRegistrationRequest:
 | **Status** | Implemented |
 | **Auth** | `auth:sanctum` |
 
-**Response `200`** — `User` object (password hidden)
+**Response `200`** — `User` object + `consent_required: boolean`
+
+`consent_required` เป็น `true` เมื่อ user ยังไม่เคยยอมรับ หรือยอมรับ version เก่ากว่า `pdpa.consent_version` → FE แสดงหน้ายอมรับ PDPA ก่อนใช้งาน
+
+---
+
+#### `POST /api/consent` — Accept privacy notice (PDPA)
+
+| | |
+|--|--|
+| **Status** | Implemented |
+| **Auth** | `auth:sanctum` |
+
+ไม่มี request body. บันทึก `consented_at = now()`, `consent_version = pdpa.consent_version`
+
+**Response `200`** — `User` (หลังจากนี้ `GET /api/user` คืน `consent_required: false`)
 
 ---
 
@@ -659,7 +740,7 @@ SSR equivalent: `POST /register/complete` → `302`
 }
 ```
 
-Max **10** items, `latest()` first.
+Max **10** items, ใหม่สุดก่อน (`created_at desc`, แล้ว `id desc` เมื่อเวลาเท่ากัน). ไม่รวมรายการที่ `status = error`
 
 ---
 
@@ -702,6 +783,8 @@ Max **10** items, `latest()` first.
 
 **Performance note:** แสดง loading state — ปุ่ม disable + spinner ขณะรอ
 
+**Async synthesis (`GEMINI_ASYNC_SYNTHESIS=true`):** `POST` คืนทันที (~ไม่กี่สิบ ms) ด้วย `result.status = "pending"` — ผล retrieval (evidence, graph, learning path, tags) ครบ แต่ overview ยังเป็น fallback. FE แสดงผลได้เลย แล้วเรียก `GET /api/search/history/{id}` (ครั้งเดียว ใช้เวลา ~4–5s) เพื่อรับ `status = "ready"`. ปิดอยู่บน production จนกว่า FE จะรองรับ
+
 ---
 
 #### `GET /api/search/history/{searchHistory}` — Get search result
@@ -734,6 +817,8 @@ Max **10** items, `latest()` first.
 ```
 
 **Fallback:** ถ้า `result` เป็น null (history เก่า) backend จะ re-run `GraphRagService::search(query)`
+
+**Pending:** ถ้า `result.status = "pending"` backend รัน synthesis ใน request นี้ (lock ต่อ history id — request ซ้อนกันรอผลเดียวกัน) บันทึก แล้วคืน `status = "ready"`. ถ้า Gemini ล้มเหลวจะคืน draft เดิม
 
 **SSR equivalent:** `GET /search/history/{id}?tab=graph`
 
@@ -781,6 +866,35 @@ Max **10** items, `latest()` first.
 
 ---
 
+#### `GET /api/progress` — Learning progress across roadmaps
+
+| | |
+|--|--|
+| **Status** | Implemented |
+| **Auth** | required |
+
+**Response `200`** — `LearningProgressIndex` (1 รายการต่อ search history ของ user, ใหม่สุดก่อน)
+
+```json
+{
+  "data": [
+    { "id": 42, "query": "ไคโตซานและบรรจุภัณฑ์ชีวภาพ", "title": "...", "completed_count": 3, "total": 12, "percent": 25, "created_at": "2026-10-29T08:00:00+00:00" }
+  ],
+  "summary": { "roadmaps": 4, "started": 2, "finished": 1, "completed_count": 15, "total": 48, "percent": 31 }
+}
+```
+
+#### `GET|PUT /api/search/history/{searchHistory}/progress` — Progress of one roadmap
+
+| | |
+|--|--|
+| **Status** | Implemented |
+| **Auth** | required, owner only |
+
+`PUT` body: `{ "phase": 0, "card": 1, "completed": true }`
+
+---
+
 ### Tag: Smart picks
 
 #### `GET /api/smart-picks` — AI recommendations
@@ -792,17 +906,31 @@ Max **10** items, `latest()` first.
 
 **Response `200`**
 
+`SmartPicksResponse`
+
 ```json
 {
   "smart_picks": {
     "headline": "AI Recommendations",
-    "items": []
+    "reason": "จากประวัติการค้นหาของคุณ",
+    "generated_at": "2026-10-29T08:00:00+00:00",
+    "items": [
+      {
+        "title": "การใช้ไคโตซานเคลือบผลไม้",
+        "info": "2565 · อุตสาหกรรมเกษตร · 4 คำสำคัญ",
+        "source": "KUKR",
+        "match": 92,
+        "reasons": ["ตรงกับคำค้น “ไคโตซาน”"],
+        "keywords": ["chitosan", "coating"],
+        "url": "https://kukr.lib.ku.ac.th/...",
+        "query": "การใช้ไคโตซานเคลือบผลไม้"
+      }
+    ]
   }
 }
 ```
 
-**Source:** `PhumpanyaMockCatalog::smartPicks()` → `config/phumpanya_mock.php`  
-> ข้อมูลยังเป็น mock config — จะเปลี่ยนเป็น personalized ในอนาคต
+**Source:** `SmartPicksService` — ค้น Elasticsearch ตาม interest profile (คำค้นล่าสุด, topic, BCG pillar, คณะของ user), จัดอันดับแบบ diversity ข้าม source. User ใหม่ (cold start) ใช้คณะเป็นหลัก
 
 ---
 
@@ -852,15 +980,14 @@ Max **10** items, `latest()` first.
 
 **Request body**
 
-```json
-{
-  "password": "current-password"
-}
-```
+| Account | Body |
+|---------|------|
+| Google (ไม่มี password) | `{ "confirm_email": "nisit@ku.th" }` — ต้องตรงกับอีเมลของบัญชี (ไม่สนตัวพิมพ์เล็ก/ใหญ่) |
+| Password | `{ "password": "current-password" }` |
 
-> Google-only users อาจต้องปรับ flow (ยัง require `current_password` ใน SSR)
+Error อยู่ใน bag `userDeletion` (`422`)
 
-**Response `204`** (API implemented)
+**Response `204`** — ลบ user, search history และ learning progress (cascade); activity log ถูกตัด `user_id` เป็น null; logout + invalidate session
 
 ---
 
@@ -963,8 +1090,8 @@ const geminiActive = (result._meta?.calls ?? 0) > 0;
 
 | Phase | Typical duration |
 |-------|------------------|
-| Qdrant retrieve | 1–3s |
-| Gemini advanced | 5–30s (หรือ fallback เร็วถ้า quota หมด) |
+| Retrieval draft (Elasticsearch, KU host) | p50 ≈ 17ms |
+| Gemini synthesis | ≈ 4–5s (หรือ fallback เร็วถ้า quota หมด) |
 | Cached history | < 100ms |
 
 ### 5. CORS + cookies (Next.js / Vite example)
@@ -992,10 +1119,12 @@ await api.get('/sanctum/csrf-cookie');
 
 ### 7. Data corpus (อ้างอิง)
 
-| Collection | Count | Sources |
-|------------|-------|---------|
-| `ku_phumpanya_docs` | 612 | KUKR 403, KU_Forest 203, KU_MOOC 6 |
-| `ku_phumpanya_relations` | 19 | BCG semantic triples |
+| Elasticsearch index | Count | Sources |
+|---------------------|-------|---------|
+| `ku_bcg_documents` | 612 | KUKR 403, KU_Forest 203, KU_MOOC 6 |
+| `ku_bcg_relations` | — | BCG semantic triples (seed predicates เช่น `mitigatesCarbonVia`) |
+
+Ontology และ Neo4j schema: `docs/ontology-schema.md`
 
 ---
 
@@ -1003,5 +1132,6 @@ await api.get('/sanctum/csrf-cookie');
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.2.0 | 2026-10-29 | `result.tags` + `result.status` (async synthesis), `GET /api/progress`, `POST /api/consent` + `consent_required`, delete account by `confirm_email`, recommender Smart Picks shape, `google_id` hidden, password login API returns 403 |
 | 1.1.0 | 2026-07-08 | All `/api/*` Planned endpoints implemented |
 | 1.0.0 | 2026-07-03 | Initial spec — SSR + planned REST contract |
