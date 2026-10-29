@@ -23,7 +23,10 @@ class GoogleAuthController extends Controller
     {
         // KU's Apache WAF 403s any query string containing "userinfo.profile", which Google appends
         // to the callback scope whenever the `profile` scope is granted. Ask for openid+email only.
-        return Socialite::driver('google')->setScopes(['openid', 'email'])->redirect();
+        return Socialite::driver('google')
+            ->setScopes(['openid', 'email'])
+            ->with(['prompt' => 'select_account'])
+            ->redirect();
     }
 
     public function callback(Request $request): RedirectResponse
