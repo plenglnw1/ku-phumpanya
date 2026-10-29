@@ -68,6 +68,9 @@ final class CheckLinks extends Command
             $responses = Http::pool(fn (Pool $pool): array => array_map(
                 fn (string $url) => $pool->as($url)
                     ->withHeaders(['User-Agent' => self::USER_AGENT])
+                    // Only the status matters; some links are large PDFs or videos,
+                    // and buffering their bodies exhausted PHP memory.
+                    ->withOptions(['sink' => '/dev/null'])
                     ->timeout(20)
                     ->get($url),
                 array_keys($batch),
