@@ -413,7 +413,7 @@ EvidenceItem:
       type: string
     source:
       type: string
-      enum: [KU_Forest, KUKR, KU_MOOC, UNKNOWN]
+      enum: [KU_Forest, KUKR, KU_MOOC, KU_NonDegree, UNKNOWN]
     url:
       type: string
       format: uri
@@ -545,7 +545,7 @@ CompleteRegistrationRequest:
   },
   "knowledge_graph": {
     "center": { "label": "agriculture", "color": "#2D5A43", "type": "topic" },
-    "description": "GraphRAG subgraph from KU BCG relations (KUKR + KU Forest + KU MOOC).",
+    "description": "กราฟความรู้จากความสัมพันธ์ในข้อมูล KU BCG (งานวิจัย KUKR, KU Forest, คอร์ส KU MOOC และชุดวิชา Non-Degree)",
     "nodes": [
       { "label": "agriculture", "color": "#EAB308", "type": "topic" },
       { "label": "forest", "color": "#A855F7", "type": "topic" }
@@ -828,10 +828,12 @@ Max **10** items, ใหม่สุดก่อน (`created_at desc`, แล�
 
 | | |
 |--|--|
-| **Status** | Planned |
+| **Status** | Implemented |
 | **Auth** | owner |
 
-**Response `204`**
+Deletes one search and the learning progress recorded against it. To clear everything, use `DELETE /api/search/recent`.
+
+**Response `204`** · **`403`** when the search belongs to another user · **`404`** when it does not exist
 
 ---
 

@@ -7,6 +7,7 @@ namespace App\Services\GraphRag\Agent\Tiers;
 use App\Services\GraphRag\Agent\GeminiClient;
 use App\Services\GraphRag\Agent\ResultFormatter;
 use App\Services\GraphRag\Agent\Synthesizer;
+use App\Services\GraphRag\DocumentSource;
 use App\Services\GraphRag\RelationGraphBuilder;
 use Illuminate\Support\Str;
 
@@ -31,7 +32,7 @@ final class BasicGenerator
             )->filter()->values()->all(),
             'entities' => array_slice($context['entities'], 0, 5),
             'courses' => collect($context['docs'])->filter(
-                fn (array $d): bool => ($d['source'] ?? '') === 'KU_MOOC',
+                fn (array $d): bool => DocumentSource::isCourse($d),
             )->take(2)->map(fn (array $d): array => [
                 'title' => (string) ($d['title'] ?? ''),
                 'url' => (string) ($d['url'] ?? ''),

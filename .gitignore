@@ -32,6 +32,9 @@
 /public/login/
 /public/register/
 /public/smart-picks/
+/public/privacy/
+/public/profile/
+/public/progress/
 /public/topic/
 /public/fonts/*.woff2
 /public/hero-laptop.png

@@ -48,14 +48,7 @@ final class HybridRetriever
                             // so querying them matched nothing. `bcg_pillars`/`faculties`/
                             // `search_keyword` are keyword-typed and excluded on purpose:
                             // they only match exact tokens, never free text.
-                            'fields' => [
-                                'title^3',
-                                'title_en^2',
-                                'keywords^2',
-                                'topic_names_th',
-                                'topic_names_en',
-                                'abstract',
-                            ],
+                            'fields' => DocumentSource::SEARCH_FIELDS,
                             'type' => 'best_fields',
                         ],
                     ],
