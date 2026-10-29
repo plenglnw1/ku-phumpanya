@@ -7,7 +7,7 @@
     # Next static SPA (trailingSlash export): /learn → learn/index.html
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{DOCUMENT_ROOT}/$1/index.html -f
-    RewriteRule ^(learn|register|smart-picks|topic)/?$ $1/index.html [L]
+    RewriteRule ^(learn|register|smart-picks|topic|progress|profile|privacy)/?$ $1/index.html [L]
 
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f

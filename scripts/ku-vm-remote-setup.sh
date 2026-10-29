@@ -222,6 +222,7 @@ rsync -a --exclude='index.php' "$APP_DIR/public/" "$PUBLIC_DIR/" 2>/dev/null || 
 
 cp "$APP_DIR/deploy/ku-vm/public-index.php" "$PUBLIC_DIR/index.php"
 cp "$APP_DIR/deploy/ku-vm/htaccess.minimal" "$PUBLIC_DIR/.htaccess" 2>/dev/null || true
+cp "$APP_DIR/deploy/ku-vm/html-root.htaccess" "$HTML_DIR/.htaccess"
 rm -f "$APP_DIR/.htaccess"
 find "$HTML_DIR" "$APP_DIR" -name '._*' -delete 2>/dev/null || true
 
