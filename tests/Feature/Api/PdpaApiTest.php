@@ -31,7 +31,9 @@ class PdpaApiTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/consent')->assertOk()->assertJsonPath('consent_version', '2026-10');
+        $this->postJson('/api/consent')->assertOk()
+            ->assertJsonPath('consent_version', '2026-10')
+            ->assertJsonPath('consent_required', false);
         $this->getJson('/api/user')->assertJsonPath('consent_required', false);
 
         config()->set('pdpa.consent_version', '2027-01');
