@@ -33,10 +33,10 @@ return [
     // (by weight), then AI-suggested (by confidence), and only edges that join the
     // graph already built are added, so trimming never leaves floating islands.
     'limits' => [
-        'relations' => (int) env('KG_RELATIONS_PER_SEARCH', 10),
-        'basic' => ['nodes' => 15, 'edges' => 20],
-        'intermediate' => ['nodes' => 25, 'edges' => 40],
-        'advanced' => ['nodes' => 40, 'edges' => 80],
+        'relations' => (int) env('KG_RELATIONS_PER_SEARCH', 60),
+        'basic' => ['nodes' => 20, 'edges' => 30],
+        'intermediate' => ['nodes' => 40, 'edges' => 60],
+        'advanced' => ['nodes' => 80, 'edges' => 120],
     ],
 
     // Edges without `origin` were curated by people and are searched ahead of the rest.

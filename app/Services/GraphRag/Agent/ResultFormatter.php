@@ -116,7 +116,7 @@ final class ResultFormatter
             foreach ((array) ($phase['modules'] ?? []) as $m => $module) {
                 $doc = is_array($module) ? $byUrl->get((string) ($module['url'] ?? '')) : null;
                 if ($doc !== null) {
-                    $learningPath['phases'][$p]['modules'][$m] = $module + self::aiTranslation($doc);
+                    $learningPath['phases'][$p]['modules'][$m] = $module + self::aiTranslation($doc) + LearningUnitOrder::moduleFields($doc);
                 }
             }
         }
