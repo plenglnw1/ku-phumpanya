@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Search;
 
 use App\Models\SearchHistory;
+use App\Services\GraphRag\Agent\GeminiUsageMeter;
 use App\Services\GraphRag\GraphRagService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -15,6 +16,7 @@ final class ResolveSearchResult
 {
     public function __construct(
         private readonly GraphRagService $graphRag,
+        private readonly GeminiUsageMeter $geminiUsage,
     ) {}
 
     /**
@@ -54,12 +56,17 @@ final class ResolveSearchResult
                         return $searchHistory->result;
                     }
 
+                    $this->geminiUsage->reset();
                     $start = microtime(true);
                     $result = $this->graphRag->search($searchHistory->query);
                     $result['status'] = 'ready';
 
+                    $metrics = $searchHistory->metrics ?? [];
+                    $metrics['gemini'] = GeminiUsageMeter::merge($metrics['gemini'] ?? null, $this->geminiUsage->snapshot());
+
                     $searchHistory->forceFill([
                         'result' => $result,
+                        'metrics' => $metrics,
                         'synthesis_latency_ms' => (int) round((microtime(true) - $start) * 1000),
                         'query_type' => match ($result['tier'] ?? null) {
                             'advanced' => 'complex',

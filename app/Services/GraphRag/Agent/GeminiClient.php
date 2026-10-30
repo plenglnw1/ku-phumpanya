@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Log;
 
 final class GeminiClient
 {
+    public function __construct(
+        private readonly GeminiUsageMeter $meter,
+    ) {}
+
     private int $callCount = 0;
 
     /** Skip further API calls this request after quota / overload errors. */
@@ -36,7 +40,25 @@ final class GeminiClient
      */
     public function generateJson(string $model, string $prompt, ?array $responseSchema = null): ?array
     {
-        if ($this->circuitOpen || ! config('gemini.enabled') || config('gemini.api_key') === '') {
+        if (! config('gemini.enabled') || config('gemini.api_key') === '') {
+            return null;
+        }
+
+        $decoded = $this->request($model, $prompt, $responseSchema);
+        if ($decoded === null) {
+            $this->meter->recordFallback();
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $responseSchema
+     * @return array<string, mixed>|null
+     */
+    private function request(string $model, string $prompt, ?array $responseSchema): ?array
+    {
+        if ($this->circuitOpen) {
             return null;
         }
 
@@ -79,11 +101,16 @@ final class GeminiClient
         }
 
         $this->callCount++;
+        $usage = $response->json('usageMetadata');
+        $this->meter->recordCall(is_array($usage) ? $usage : null);
 
         if (! $response->successful()) {
             $status = $response->status();
             if (in_array($status, [429, 503], true)) {
                 $this->circuitOpen = true;
+            }
+            if ($status === 429) {
+                $this->meter->recordRateLimited();
             }
 
             Log::warning('GeminiClient: non-200', ['status' => $status, 'body' => $response->body()]);
