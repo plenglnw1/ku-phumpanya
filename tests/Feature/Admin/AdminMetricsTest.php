@@ -33,7 +33,7 @@ class AdminMetricsTest extends TestCase
         $teacher = User::factory()->create(['role' => UserRole::Teacher, 'faculty' => null, 'consented_at' => null]);
         $admin = User::factory()->create(['role' => UserRole::Admin]);
 
-        $answered = $this->search($student, 'คาร์บอน', 'success', ['top_node_labels' => ['ลดคาร์บอน', 'ป่าไม้']]);
+        $answered = $this->search($student, 'คาร์บอน', 'success', ['top_node_labels' => ['ลดคาร์บอน', 'ป่าไม้', 'วนศาสตร์']]);
         $this->search($student, ' คาร์บอน ', 'success', ['top_node_labels' => ['ลดคาร์บอน']]);
         $this->search($teacher, 'xyz', 'zero_results');
         $this->search($admin, 'admin test', 'success');
@@ -68,6 +68,7 @@ class AdminMetricsTest extends TestCase
         }
         $this->search($user, 'broken', 'error', ['error_message' => 'ES down', 'gemini' => ['calls' => 1, 'total_tokens' => 0, 'rate_limited' => 1, 'fallbacks' => 1]]);
         $this->search($user, 'old row', 'success');
+        $this->search($user, 'unmeasured', 'success', [], 0);
 
         $system = app(SystemMetrics::class);
 
@@ -76,10 +77,11 @@ class AdminMetricsTest extends TestCase
         $this->assertSame(4000, $latency['total']['p95']);
 
         $errors = $system->errors();
-        $this->assertSame(16.7, $errors['rate']);
+        $this->assertSame(14.3, $errors['rate']);
         $this->assertSame('ES down', $errors['recent'][0]['message']);
 
         $gemini = $system->gemini();
+        $this->assertSame(4, $latency['total']['samples']);
         $this->assertSame(5, $gemini['searches']);
         $this->assertSame(9, $gemini['calls']);
         $this->assertSame(2000, $gemini['total_tokens']);
