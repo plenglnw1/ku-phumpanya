@@ -69,8 +69,8 @@ final class AdvancedGenerator
         $graph = $this->graphBuilder->build(
             $merged['entities'],
             $context['relations'],
-            40,
-            80,
+            (int) config('knowledge_graph.limits.advanced.nodes', 40),
+            (int) config('knowledge_graph.limits.advanced.edges', 80),
         );
 
         return [

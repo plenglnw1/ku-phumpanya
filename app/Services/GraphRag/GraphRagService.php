@@ -83,20 +83,20 @@ final class GraphRagService
         $tokens = collect(explode(' ', Str::lower($query)))->filter()->values()->all();
         $paths = $this->pathwayRanker->rank($tokens, $bcgTags, $facultyTags, 3);
 
-        $content = (string) ($topDocument['content'] ?? $topDocument['abstract'] ?? 'No contextual summary found.');
+        $content = ResultFormatter::text($topDocument['content'] ?? $topDocument['abstract'] ?? '') ?: 'ไม่มีบทสรุป';
         $synthesisMs = (int) round((microtime(true) - $synthesisStart) * 1000);
 
         return [
             'title' => $title,
             'overview' => [
                 'intro' => $content,
-                'analogy' => 'GraphRAG links entities and sources so answers are grounded across KU Forest, KUKR, and KU MOOC.',
-                'research_basis' => 'Seeded from KU BCG corpus with cross-source triplets.',
-                'expert' => 'Knowledge source: KU integrated prototype (GraphRAG Simple).',
+                'analogy' => 'กราฟความรู้เชื่อมแนวคิดกับแหล่งข้อมูล คำตอบจึงอ้างอิงได้ทั้งงานวิจัย KUKR โครงการ KU Forest และคอร์สของ มก.',
+                'research_basis' => 'อ้างอิงจากคลังข้อมูล KU BCG และความสัมพันธ์ข้ามแหล่งข้อมูล',
+                'expert' => 'แหล่งความรู้: KU Phumpanya GraphRAG',
             ],
             'knowledge_graph' => $graph,
             'learning_path' => $this->toLearningPath($paths),
-            'evidence' => $this->toEvidence($documents),
+            'evidence' => ResultFormatter::toEvidence($documents),
             'tags' => ResultFormatter::tags($documents, config('bcg_topics.faculties', [])),
             '_meta' => [
                 'docs_retrieved' => count($documents),
@@ -119,38 +119,21 @@ final class GraphRagService
         $modules = collect($paths)->map(function (array $path): array {
             $courses = collect($path['courses'] ?? [])->map(fn (array $course): array => [
                 'title' => (string) ($course['title'] ?? 'Course'),
-                'hours' => '8-12 hrs',
+                'hours' => '',
                 'desc' => (string) ($course['url'] ?? ''),
             ])->all();
 
             return [
-                'name' => 'Phase: '.$path['title'],
+                'name' => (string) $path['title'],
                 'intro' => (string) ($path['description'] ?? ''),
                 'modules' => $courses,
             ];
         })->all();
 
         return [
-            'estimated_hours' => '90-140',
-            'subtitle' => 'Ranked by lexical similarity + BCG tags + faculty overlap',
+            'estimated_hours' => '',
+            'subtitle' => 'จัดลำดับจากความใกล้เคียงของคำค้น เสาหลัก BCG และคณะที่เกี่ยวข้อง',
             'phases' => $modules,
         ];
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $documents
-     * @return list<array<string, mixed>>
-     */
-    private function toEvidence(array $documents): array
-    {
-        return collect($documents)
-            ->map(fn (array $doc): array => [
-                'title' => (string) ($doc['title'] ?? 'Untitled'),
-                'source' => (string) ($doc['source'] ?? 'UNKNOWN'),
-                'url' => (string) ($doc['url'] ?? ''),
-                'snippet' => Str::limit((string) ($doc['content'] ?? $doc['abstract'] ?? ''), 150),
-            ])
-            ->values()
-            ->all();
     }
 }

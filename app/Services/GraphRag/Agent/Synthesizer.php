@@ -87,25 +87,21 @@ final class Synthesizer
     public function fallbackSynthesize(string $query, array $extracted, array $docs, string $title): array
     {
         $intro = implode(' ', $extracted['key_points'] ?? [])
-            ?: (string) ($docs[0]['content'] ?? $docs[0]['abstract'] ?? 'No summary available.');
-
-        $phases = $this->groupIntoPhases($docs);
-        $moduleCount = array_sum(array_map(static fn (array $p): int => count($p['modules']), $phases));
+            ?: (ResultFormatter::text($docs[0]['content'] ?? $docs[0]['abstract'] ?? '') ?: 'ไม่มีบทสรุป');
 
         return [
             'title' => $title,
             'overview' => [
                 'intro' => $intro,
-                'analogy' => 'Like connecting dots across KU Forest papers, KUKR library, and KU MOOC courses.',
-                'research_basis' => 'Grounded in '.count($docs).' retrieved documents from KU BCG corpus.',
-                'expert' => 'Knowledge source: KU Phumpanya GraphRAG (local vector + relations).',
+                'analogy' => 'เหมือนการลากเส้นเชื่อมจุดระหว่างงานวิจัย KUKR โครงการ KU Forest และคอร์สของ มก.',
+                'research_basis' => 'อ้างอิงจากเอกสาร '.count($docs).' รายการที่ค้นพบในคลังข้อมูล KU BCG',
+                'expert' => 'แหล่งความรู้: KU Phumpanya GraphRAG (เอกสารและความสัมพันธ์ในคลังข้อมูล)',
             ],
             'learning_path' => [
-                // Derived from the per-module 8-12 hrs rather than a fixed constant, so the
-                // headline total stays consistent with however many modules were built.
-                'estimated_hours' => $moduleCount > 0 ? ($moduleCount * 8).'-'.($moduleCount * 12) : '0',
-                'subtitle' => 'Heuristic path from retrieved sources',
-                'phases' => $phases,
+                // No source publishes study hours, so none are invented.
+                'estimated_hours' => '',
+                'subtitle' => ResultFormatter::SUBTITLE_HEURISTIC,
+                'phases' => $this->groupIntoPhases($docs),
             ],
         ];
     }
@@ -151,16 +147,15 @@ final class Synthesizer
                     // result-wide overview on every card.
                     'modules' => $shown->map(fn (array $d): array => [
                         'title' => (string) ($d['title'] ?? 'Untitled'),
-                        'hours' => '8-12 hrs',
+                        'hours' => '',
                         'desc' => $this->moduleDesc($d),
                         'url' => (string) ($d['url'] ?? ''),
                         'abstract' => self::text($d['abstract'] ?? $d['content'] ?? ''),
                         'authors' => $this->authorList($d),
                         'year' => self::text($d['year'] ?? ''),
                         'source' => (string) ($d['source'] ?? ''),
-                        'keywords' => collect((array) ($d['keywords'] ?? []))
-                            ->map(fn (mixed $k): string => self::text($k))
-                            ->filter()->take(8)->values()->all(),
+                        ...ResultFormatter::keywords($d, 8),
+                        ...ResultFormatter::aiTranslation($d),
                         // KU Forest publishes no abstract, so these Thai project
                         // details are all the detail page has to show for those
                         // documents. Empty on sources that do not carry them.
@@ -257,15 +252,8 @@ final class Synthesizer
         return trim($author.($author !== '' && $year !== '' ? ' · ' : '').$year) ?: 'ไม่มีคำอธิบาย';
     }
 
-    /**
-     * Corpus fields are strings in some sources and objects (e.g. `{name, affiliation}`) in others.
-     */
     private static function text(mixed $value): string
     {
-        if (is_array($value)) {
-            $value = $value['name'] ?? $value['name_th'] ?? $value['th'] ?? $value['en'] ?? reset($value);
-        }
-
-        return is_scalar($value) ? trim((string) $value) : '';
+        return ResultFormatter::text($value);
     }
 }

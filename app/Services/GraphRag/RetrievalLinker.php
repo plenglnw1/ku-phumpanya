@@ -30,7 +30,7 @@ final class RetrievalLinker
     {
         $topK = (int) config('qdrant.top_k', 6);
         $docs = $this->retrieveDocs($query, $topK);
-        $relations = $this->retrieveRelations($query, 10);
+        $relations = $this->retrieveRelations($query, (int) config('knowledge_graph.limits.relations', 10));
 
         $topics = collect($docs)
             ->flatMap(fn (array $doc): array => $doc['topic_ids'] ?? [])
@@ -142,7 +142,7 @@ final class RetrievalLinker
         $terms = collect(explode(' ', Str::lower($query)))->filter();
 
         return collect(config('graphrag_seed.topics', []))
-            ->flatMap(function (array $topic) use ($terms): array {
+            ->flatMap(function (array $topic): array {
                 $relations = [];
                 foreach (($topic['faculty_tags'] ?? []) as $faculty) {
                     $relations[] = [
