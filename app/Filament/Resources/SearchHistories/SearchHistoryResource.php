@@ -4,7 +4,6 @@ namespace App\Filament\Resources\SearchHistories;
 
 use App\Filament\Resources\SearchHistories\Pages\ListSearchHistories;
 use App\Filament\Resources\SearchHistories\Pages\ViewSearchHistory;
-use App\Filament\Resources\SearchHistories\Schemas\SearchHistoryForm;
 use App\Filament\Resources\SearchHistories\Schemas\SearchHistoryInfolist;
 use App\Filament\Resources\SearchHistories\Tables\SearchHistoriesTable;
 use App\Models\SearchHistory;
@@ -13,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class SearchHistoryResource extends Resource
 {
@@ -26,9 +26,19 @@ class SearchHistoryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Search Histories';
 
-    public static function form(Schema $schema): Schema
+    public static function canCreate(): bool
     {
-        return SearchHistoryForm::configure($schema);
+        return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
     }
 
     public static function infolist(Schema $schema): Schema

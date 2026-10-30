@@ -27,4 +27,42 @@ return [
     'reports' => [
         'neo4j-verify' => 'Gate verification (1.2.1–1.2.4)',
     ],
+
+    // The six BCG topics; ids match `topic_id` in ku_bcg_relations and `topic_ids` in ku_bcg_documents.
+    'topics' => [
+        '1' => 'ชีวมวลและพลังงานทดแทนจากผลผลิตเกษตร',
+        '2' => 'ไคโตซานและบรรจุภัณฑ์ชีวภาพย่อยสลายได้',
+        '3' => 'Microplastics กับคุณภาพน้ำในระบบนิเวศและการเพาะเลี้ยง',
+        '4' => 'Carbon Footprint และการมุ่งสู่ Carbon Neutrality ภาคเกษตร-ป่าไม้',
+        '5' => 'การเพาะเลี้ยงสัตว์น้ำที่ยั่งยืนและ Probiotic ในระบบเลี้ยง',
+        '6' => 'วนเกษตร (Agroforestry) และความหลากหลายทางชีวภาพ',
+    ],
+
+    // Same wording as KU-BCG lib/kgText.ts so admins and users read the same phrases.
+    'predicate_labels' => [
+        'mitigatesCarbonVia' => 'ช่วยลดคาร์บอนผ่าน',
+        'integratesSpecies' => 'ผสมผสานเข้ากับ',
+        'isKeywordOf' => 'เป็นคำสำคัญของ',
+        'pollutesVia' => 'ก่อมลพิษผ่าน',
+        'isEntryPointFor' => 'เป็นคอร์สเริ่มต้นสำหรับ',
+        'isFeedstockOf' => 'เป็นวัตถุดิบของ',
+        'providesRawMaterialTo' => 'ส่งวัตถุดิบให้',
+        'isLaunchingNodeFor' => 'เป็นคอร์สปูพื้นฐานให้',
+        'expandsEconomicsPerspectiveOf' => 'ขยายมุมมองด้านเศรษฐศาสตร์ของ',
+        'enhancesGrowthOf' => 'ช่วยเพิ่มการเติบโตของ',
+        'requires' => 'ต้องอาศัย',
+        'connectsViaValueChain' => 'เชื่อมโยงกันผ่านห่วงโซ่คุณค่ากับ',
+        'relatedTo' => 'เกี่ยวข้องกับ',
+        'linkedFaculty' => 'เกี่ยวข้องกับคณะ',
+        'studiedBy' => 'มีการศึกษาโดย',
+        'isCourseFor' => 'เป็นชุดวิชาสำหรับ',
+        'inTopic' => 'อยู่ในหัวข้อ',
+    ],
+
+    'source_labels' => [
+        'KUKR' => 'งานวิจัย KUKR',
+        'KU_Forest' => 'โครงการ KU Forest',
+        'KU_MOOC' => 'คอร์ส KU MOOC',
+        'KU_NonDegree' => 'ชุดวิชา Non-Degree',
+    ],
 ];

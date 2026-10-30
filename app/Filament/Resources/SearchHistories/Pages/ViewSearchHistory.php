@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\SearchHistories\Pages;
 
+use App\Filament\Pages\KnowledgeGraphExplorer;
 use App\Filament\Resources\SearchHistories\SearchHistoryResource;
-use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Support\Icons\Heroicon;
 
 class ViewSearchHistory extends ViewRecord
 {
@@ -13,7 +15,10 @@ class ViewSearchHistory extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            Action::make('graph')
+                ->label('ดูกราฟ')
+                ->icon(Heroicon::OutlinedShare)
+                ->url(fn (): string => KnowledgeGraphExplorer::getUrl(['history' => $this->getRecord()->getKey()])),
         ];
     }
 }

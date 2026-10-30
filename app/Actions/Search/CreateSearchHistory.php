@@ -6,6 +6,7 @@ namespace App\Actions\Search;
 
 use App\Models\SearchHistory;
 use App\Models\User;
+use App\Services\GraphRag\Agent\GeminiUsageMeter;
 use App\Services\GraphRag\GraphRagService;
 use Throwable;
 
@@ -13,10 +14,12 @@ final class CreateSearchHistory
 {
     public function __construct(
         private readonly GraphRagService $graphRag,
+        private readonly GeminiUsageMeter $geminiUsage,
     ) {}
 
     public function execute(User $user, string $query): SearchHistory
     {
+        $this->geminiUsage->reset();
         $start = microtime(true);
         $status = 'success';
         $result = null;
@@ -82,6 +85,7 @@ final class CreateSearchHistory
                 'docs_retrieved' => $meta['docs_retrieved'] ?? null,
                 'relations_retrieved' => $meta['relations_retrieved'] ?? null,
                 'error_message' => $caught?->getMessage(),
+                'gemini' => $this->geminiUsage->snapshot(),
             ],
         ]);
 

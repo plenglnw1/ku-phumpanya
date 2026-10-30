@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\GraphRag\Agent\GeminiClient;
+use App\Services\GraphRag\Agent\GeminiUsageMeter;
 use App\Support\RedirectAfterLogin;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -21,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
         // router, sub-agents and synthesizer actually make, and so a 429/503
         // opening the circuit stops the remaining components too.
         $this->app->singleton(GeminiClient::class);
+        $this->app->singleton(GeminiUsageMeter::class);
     }
 
     /**
