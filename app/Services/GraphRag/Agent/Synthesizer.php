@@ -154,12 +154,12 @@ final class Synthesizer
                         'hours' => '8-12 hrs',
                         'desc' => $this->moduleDesc($d),
                         'url' => (string) ($d['url'] ?? ''),
-                        'abstract' => trim((string) ($d['abstract'] ?? $d['content'] ?? '')),
+                        'abstract' => self::text($d['abstract'] ?? $d['content'] ?? ''),
                         'authors' => $this->authorList($d),
-                        'year' => (string) ($d['year'] ?? ''),
+                        'year' => self::text($d['year'] ?? ''),
                         'source' => (string) ($d['source'] ?? ''),
                         'keywords' => collect((array) ($d['keywords'] ?? []))
-                            ->map(fn (mixed $k): string => trim((string) $k))
+                            ->map(fn (mixed $k): string => self::text($k))
                             ->filter()->take(8)->values()->all(),
                         // KU Forest publishes no abstract, so these Thai project
                         // details are all the detail page has to show for those
@@ -187,7 +187,7 @@ final class Synthesizer
         $raw = $doc['authors'] ?? [];
 
         return collect(is_array($raw) ? $raw : [$raw])
-            ->map(fn (mixed $a): string => trim((string) $a))
+            ->map(fn (mixed $a): string => self::text($a))
             ->filter()
             ->take(6)
             ->values()
@@ -201,7 +201,7 @@ final class Synthesizer
     {
         foreach (['topic_names_th', 'topic_names_en'] as $field) {
             $names = (array) ($doc[$field] ?? []);
-            $first = trim((string) (reset($names) ?: ''));
+            $first = self::text(reset($names) ?: '');
             if ($first !== '') {
                 return $first;
             }
@@ -237,13 +237,13 @@ final class Synthesizer
      */
     private function moduleDesc(array $doc): string
     {
-        $abstract = trim((string) ($doc['abstract'] ?? $doc['content'] ?? ''));
+        $abstract = self::text($doc['abstract'] ?? $doc['content'] ?? '');
         if ($abstract !== '') {
             return Str::limit($abstract, 120);
         }
 
         $keywords = collect((array) ($doc['keywords'] ?? []))
-            ->map(fn (mixed $k): string => trim((string) $k))
+            ->map(fn (mixed $k): string => self::text($k))
             ->filter()
             ->take(5);
         if ($keywords->isNotEmpty()) {
@@ -251,9 +251,21 @@ final class Synthesizer
         }
 
         $authors = (array) ($doc['authors'] ?? []);
-        $author = trim((string) (reset($authors) ?: ($doc['authors'] ?? '')));
-        $year = trim((string) ($doc['year'] ?? ''));
+        $author = self::text(reset($authors) ?: '');
+        $year = self::text($doc['year'] ?? '');
 
         return trim($author.($author !== '' && $year !== '' ? ' · ' : '').$year) ?: 'ไม่มีคำอธิบาย';
+    }
+
+    /**
+     * Corpus fields are strings in some sources and objects (e.g. `{name, affiliation}`) in others.
+     */
+    private static function text(mixed $value): string
+    {
+        if (is_array($value)) {
+            $value = $value['name'] ?? $value['name_th'] ?? $value['th'] ?? $value['en'] ?? reset($value);
+        }
+
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 }
