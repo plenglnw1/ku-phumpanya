@@ -36,6 +36,8 @@ final class SystemMetrics
     ) {}
 
     /**
+     * Zero timings mean the stage was not measured; counting them drags the median to 0.
+     *
      * @return array<string, array{p50: ?int, p95: ?int, samples: int}>
      */
     public function latency(int $days = 7): array
@@ -46,7 +48,7 @@ final class SystemMetrics
 
         $stats = [];
         foreach (self::LATENCY_COLUMNS as $name => $column) {
-            $values = $rows->pluck($column)->filter(fn ($v): bool => $v !== null)->map(fn ($v): int => (int) $v)->all();
+            $values = $rows->pluck($column)->filter(fn ($v): bool => (int) $v > 0)->map(fn ($v): int => (int) $v)->values()->all();
             $stats[$name] = [
                 'p50' => self::percentile($values, 50),
                 'p95' => self::percentile($values, 95),
@@ -66,7 +68,7 @@ final class SystemMetrics
     {
         $byDay = $this->recent($days)
             ->where('status', '!=', 'error')
-            ->whereNotNull('total_latency_ms')
+            ->where('total_latency_ms', '>', 0)
             ->get(['total_latency_ms', 'created_at'])
             ->groupBy(fn (SearchHistory $h): string => $h->created_at->toDateString());
 

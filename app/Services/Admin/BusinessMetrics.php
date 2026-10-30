@@ -132,17 +132,20 @@ final class BusinessMetrics
     }
 
     /**
-     * Concepts that most often appear in the graphs users were shown.
+     * Concepts that most often appear in the graphs users were shown. Faculty nodes
+     * are left out: they sit in almost every graph and say nothing about interest.
      *
      * @return array<string, int>
      */
     public function topConcepts(int $days = 30, int $limit = 10): array
     {
+        $faculties = collect((array) config('bcg_topics.faculties'))->flatten()->map(fn ($f): string => (string) $f)->unique()->all();
+
         return $this->searches($days)
             ->where('status', 'success')
             ->get(['metrics'])
             ->flatMap(fn (SearchHistory $h): array => array_map('strval', (array) ($h->metrics['top_node_labels'] ?? [])))
-            ->filter(fn (string $label): bool => trim($label) !== '')
+            ->filter(fn (string $label): bool => trim($label) !== '' && ! in_array($label, $faculties, true))
             ->countBy()
             ->sortDesc()
             ->take($limit)
