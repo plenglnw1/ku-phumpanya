@@ -49,8 +49,8 @@ final class BasicGenerator
         $graph = $this->graphBuilder->build(
             array_slice($context['entities'], 0, 5),
             $context['relations'],
-            15,
-            20,
+            (int) config('knowledge_graph.limits.basic.nodes', 15),
+            (int) config('knowledge_graph.limits.basic.edges', 20),
         );
 
         return [

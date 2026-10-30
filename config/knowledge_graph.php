@@ -28,6 +28,20 @@ return [
         'neo4j-verify' => 'Gate verification (1.2.1–1.2.4)',
     ],
 
+    // Graph size per search. `relations` is how many triples retrieval fetches; the
+    // tiers then cap nodes and edges. Curated edges are kept first, then derived
+    // (by weight), then AI-suggested (by confidence), and only edges that join the
+    // graph already built are added, so trimming never leaves floating islands.
+    'limits' => [
+        'relations' => (int) env('KG_RELATIONS_PER_SEARCH', 60),
+        'basic' => ['nodes' => 20, 'edges' => 30],
+        'intermediate' => ['nodes' => 40, 'edges' => 60],
+        'advanced' => ['nodes' => 80, 'edges' => 120],
+    ],
+
+    // Edges without `origin` were curated by people and are searched ahead of the rest.
+    'curated_relation_boost' => 3.0,
+
     // The six BCG topics; ids match `topic_id` in ku_bcg_relations and `topic_ids` in ku_bcg_documents.
     'topics' => [
         '1' => 'ชีวมวลและพลังงานทดแทนจากผลผลิตเกษตร',

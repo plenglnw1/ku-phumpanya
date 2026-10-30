@@ -87,93 +87,113 @@ final class Synthesizer
     public function fallbackSynthesize(string $query, array $extracted, array $docs, string $title): array
     {
         $intro = implode(' ', $extracted['key_points'] ?? [])
-            ?: (string) ($docs[0]['content'] ?? $docs[0]['abstract'] ?? 'No summary available.');
-
-        $phases = $this->groupIntoPhases($docs);
-        $moduleCount = array_sum(array_map(static fn (array $p): int => count($p['modules']), $phases));
+            ?: (ResultFormatter::text($docs[0]['content'] ?? $docs[0]['abstract'] ?? '') ?: 'ไม่มีบทสรุป');
 
         return [
             'title' => $title,
             'overview' => [
                 'intro' => $intro,
-                'analogy' => 'Like connecting dots across KU Forest papers, KUKR library, and KU MOOC courses.',
-                'research_basis' => 'Grounded in '.count($docs).' retrieved documents from KU BCG corpus.',
-                'expert' => 'Knowledge source: KU Phumpanya GraphRAG (local vector + relations).',
+                'analogy' => 'เหมือนการลากเส้นเชื่อมจุดระหว่างงานวิจัย KUKR โครงการ KU Forest และคอร์สของ มก.',
+                'research_basis' => 'อ้างอิงจากเอกสาร '.count($docs).' รายการที่ค้นพบในคลังข้อมูล KU BCG',
+                'expert' => 'แหล่งความรู้: KU Phumpanya GraphRAG (เอกสารและความสัมพันธ์ในคลังข้อมูล)',
             ],
             'learning_path' => [
-                // Derived from the per-module 8-12 hrs rather than a fixed constant, so the
-                // headline total stays consistent with however many modules were built.
-                'estimated_hours' => $moduleCount > 0 ? ($moduleCount * 8).'-'.($moduleCount * 12) : '0',
-                'subtitle' => 'Heuristic path from retrieved sources',
-                'phases' => $phases,
+                // No source publishes study hours, so none are invented.
+                'estimated_hours' => '',
+                'subtitle' => ResultFormatter::SUBTITLE_HEURISTIC,
+                'phases' => $this->groupIntoPhases($docs),
             ],
         ];
     }
 
     /**
-     * Partitions the retrieved documents into phases by subject area.
+     * Partitions the retrieved documents into phases.
      *
-     * Every document carries `topic_names_th`, so a partition can never leave a phase
-     * empty — unlike filtering against fixed categories (e.g. KU MOOC, which is 6 of
-     * 612 documents and absent from most result sets). Groups keep retrieval order, so
-     * the phase holding the best-matching document comes first.
-     *
-     * Note this is a *thematic* ordering, not a prerequisite one: the corpus records
-     * carry no dependency relations. Real sequencing needs the synthesizer LLM.
+     * Courses that carry `teaches`/`needs` and depend on one another come first, one
+     * phase per prerequisite depth (see LearningUnitOrder). Everything else is grouped
+     * by subject area: every document carries `topic_names_th`, so a partition can
+     * never leave a phase empty. Groups keep retrieval order, so the phase holding the
+     * best-matching document comes first. That part is a *thematic* ordering, not a
+     * prerequisite one.
      *
      * @param  list<array<string, mixed>>  $docs
      * @return list<array<string, mixed>>
      */
     public function groupIntoPhases(array $docs, int $maxPhases = 3, int $maxModules = 4): array
     {
-        $groups = [];
-        foreach ($docs as $doc) {
-            $key = $this->topicLabel($doc);
-            $groups[$key] ??= [];
-            $groups[$key][] = $doc;
+        $units = array_values(array_filter($docs, LearningUnitOrder::isUnit(...)));
+        $order = LearningUnitOrder::order($units);
+
+        $phases = [];
+        if ($order['ordered']) {
+            foreach (array_slice($order['phases'], 0, $maxPhases) as $i => $phase) {
+                $shown = array_slice($phase, 0, $maxModules);
+                $phases[] = $this->phase('ขั้นที่ '.($i + 1).' · '.$this->stageLabel($i), $shown);
+            }
+            $docs = array_values(array_filter($docs, fn (array $d): bool => ! LearningUnitOrder::isUnit($d)));
         }
 
-        $selected = collect($groups)->take($maxPhases);
+        $groups = [];
+        foreach ($docs as $doc) {
+            $groups[$this->topicLabel($doc)][] = $doc;
+        }
+
+        $selected = collect($groups)->take($maxPhases - count($phases));
 
         // A query whose results all share one subject area yields a single phase. Widen
         // it so the retrieved documents aren't discarded just because they didn't split.
-        $perPhase = $selected->count() === 1 ? $maxPhases * $maxModules : $maxModules;
+        $perPhase = $phases === [] && $selected->count() === 1 ? $maxPhases * $maxModules : $maxModules;
 
-        return $selected
-            ->map(function (array $group, string $name) use ($perPhase): array {
-                $shown = collect($group)->take($perPhase);
+        foreach ($selected as $name => $group) {
+            $phases[] = $this->phase((string) $name, array_slice($group, 0, $perPhase));
+        }
 
-                return [
-                    'name' => $name,
-                    'intro' => $this->phaseIntro($shown->all()),
-                    // abstract/authors/year/source are carried through so the topic detail
-                    // page can render per-document content instead of repeating the
-                    // result-wide overview on every card.
-                    'modules' => $shown->map(fn (array $d): array => [
-                        'title' => (string) ($d['title'] ?? 'Untitled'),
-                        'hours' => '8-12 hrs',
-                        'desc' => $this->moduleDesc($d),
-                        'url' => (string) ($d['url'] ?? ''),
-                        'abstract' => self::text($d['abstract'] ?? $d['content'] ?? ''),
-                        'authors' => $this->authorList($d),
-                        'year' => self::text($d['year'] ?? ''),
-                        'source' => (string) ($d['source'] ?? ''),
-                        'keywords' => collect((array) ($d['keywords'] ?? []))
-                            ->map(fn (mixed $k): string => self::text($k))
-                            ->filter()->take(8)->values()->all(),
-                        // KU Forest publishes no abstract, so these Thai project
-                        // details are all the detail page has to show for those
-                        // documents. Empty on sources that do not carry them.
-                        'category' => (string) ($d['category'] ?? ''),
-                        'project_nature' => (string) ($d['project_nature'] ?? ''),
-                        'budget_year' => (string) ($d['budget_year'] ?? ''),
-                        'funding' => (string) ($d['funding'] ?? ''),
-                        'department' => (string) ($d['department'] ?? ''),
-                    ])->values()->all(),
-                ];
-            })
-            ->values()
-            ->all();
+        return $phases;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $shown
+     * @return array<string, mixed>
+     */
+    private function phase(string $name, array $shown): array
+    {
+        return [
+            'name' => $name,
+            'intro' => $this->phaseIntro($shown),
+            // abstract/authors/year/source are carried through so the topic detail
+            // page can render per-document content instead of repeating the
+            // result-wide overview on every card.
+            'modules' => array_map(fn (array $d): array => [
+                'title' => (string) ($d['title'] ?? 'Untitled'),
+                'hours' => '',
+                'desc' => $this->moduleDesc($d),
+                'url' => (string) ($d['url'] ?? ''),
+                'abstract' => self::text($d['abstract'] ?? $d['content'] ?? ''),
+                'authors' => $this->authorList($d),
+                'year' => self::text($d['year'] ?? ''),
+                'source' => (string) ($d['source'] ?? ''),
+                ...ResultFormatter::keywords($d, 8),
+                ...ResultFormatter::aiTranslation($d),
+                ...LearningUnitOrder::moduleFields($d),
+                // KU Forest publishes no abstract, so these Thai project
+                // details are all the detail page has to show for those
+                // documents. Empty on sources that do not carry them.
+                'category' => (string) ($d['category'] ?? ''),
+                'project_nature' => (string) ($d['project_nature'] ?? ''),
+                'budget_year' => (string) ($d['budget_year'] ?? ''),
+                'funding' => (string) ($d['funding'] ?? ''),
+                'department' => (string) ($d['department'] ?? ''),
+            ], array_values($shown)),
+        ];
+    }
+
+    private function stageLabel(int $depth): string
+    {
+        return match ($depth) {
+            0 => 'ปูพื้นฐาน',
+            1 => 'ต่อยอด',
+            default => 'ขั้นสูง',
+        };
     }
 
     /**
@@ -257,15 +277,8 @@ final class Synthesizer
         return trim($author.($author !== '' && $year !== '' ? ' · ' : '').$year) ?: 'ไม่มีคำอธิบาย';
     }
 
-    /**
-     * Corpus fields are strings in some sources and objects (e.g. `{name, affiliation}`) in others.
-     */
     private static function text(mixed $value): string
     {
-        if (is_array($value)) {
-            $value = $value['name'] ?? $value['name_th'] ?? $value['th'] ?? $value['en'] ?? reset($value);
-        }
-
-        return is_scalar($value) ? trim((string) $value) : '';
+        return ResultFormatter::text($value);
     }
 }

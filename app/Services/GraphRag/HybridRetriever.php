@@ -160,10 +160,22 @@ final class HybridRetriever
                 'body' => [
                     'size' => $size,
                     'query' => [
-                        'multi_match' => [
-                            'query' => $query,
-                            'fields' => ['subject^2', 'object^2', 'predicate'],
-                            'type' => 'best_fields',
+                        'bool' => [
+                            'must' => [
+                                'multi_match' => [
+                                    'query' => $query,
+                                    'fields' => ['subject^2', 'object^2', 'predicate'],
+                                    'type' => 'best_fields',
+                                ],
+                            ],
+                            // Derived and AI-suggested triples far outnumber curated ones;
+                            // without this they would crowd curated edges out of the top hits.
+                            'should' => [
+                                ['constant_score' => [
+                                    'filter' => ['bool' => ['must_not' => ['exists' => ['field' => 'origin']]]],
+                                    'boost' => (float) config('knowledge_graph.curated_relation_boost', 3.0),
+                                ]],
+                            ],
                         ],
                     ],
                 ],

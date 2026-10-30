@@ -41,8 +41,8 @@ final class IntermediateGenerator
         $graph = $this->graphBuilder->build(
             array_merge($extracted['entities'], $context['entities']),
             $context['relations'],
-            25,
-            40,
+            (int) config('knowledge_graph.limits.intermediate.nodes', 25),
+            (int) config('knowledge_graph.limits.intermediate.edges', 40),
         );
 
         return [

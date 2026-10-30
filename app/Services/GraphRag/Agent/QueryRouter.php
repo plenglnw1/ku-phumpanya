@@ -11,6 +11,12 @@ use Illuminate\Support\Str;
  */
 final class QueryRouter
 {
+    /**
+     * Relations counted when routing. Retrieval fetches more for the graph; counting
+     * them all would send nearly every query to the advanced tier.
+     */
+    private const ROUTING_RELATIONS = 10;
+
     public function __construct(
         private readonly GeminiClient $gemini,
     ) {}
@@ -46,7 +52,7 @@ final class QueryRouter
             "Classify this KU BCG research query complexity.\n\nQuery: %s\nDocs retrieved: %d\nRelations: %d\nTopics: %d\n\nReturn JSON with tier (basic|intermediate|advanced) and reason.\n- basic: simple lookup, single concept\n- intermediate: multi-source synthesis, 2 topics\n- advanced: comparison, cross-faculty chains, learning path design",
             $context['query'],
             count($context['docs']),
-            count($context['relations']),
+            min(count($context['relations']), self::ROUTING_RELATIONS),
             count($context['topics']),
         );
 
@@ -84,7 +90,7 @@ final class QueryRouter
         $query = Str::lower($context['query']);
         $wordCount = str_word_count($query);
         $topicCount = count($context['topics']);
-        $relationCount = count($context['relations']);
+        $relationCount = min(count($context['relations']), self::ROUTING_RELATIONS);
 
         $advancedKeywords = ['compare', 'relationship', 'path', 'learning', 'cross', 'เปรียบเทียบ', 'เชื่อมโยง', 'เส้นทาง'];
         $intermediateKeywords = ['how', 'why', 'impact', 'effect', 'อย่างไร', 'ส่งผล', 'มีผล'];

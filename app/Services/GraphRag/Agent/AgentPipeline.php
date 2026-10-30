@@ -58,7 +58,7 @@ final class AgentPipeline
         return [
             'title' => $heuristic['title'],
             'overview' => $heuristic['overview'],
-            'knowledge_graph' => $this->graphBuilder->build(array_slice($context['entities'], 0, 5), $context['relations'], 15, 20),
+            'knowledge_graph' => $this->graphBuilder->build(array_slice($context['entities'], 0, 5), $context['relations'], (int) config('knowledge_graph.limits.basic.nodes', 15), (int) config('knowledge_graph.limits.basic.edges', 20)),
             'learning_path' => ResultFormatter::normalizeLearningPath(null, $this->synthesizer->groupIntoPhases($docs)),
             'evidence' => ResultFormatter::toEvidence($docs),
             'tags' => ResultFormatter::tags($docs, config('bcg_topics.faculties', [])),
@@ -102,6 +102,7 @@ final class AgentPipeline
 
         $subQueries = $result['_sub_queries'] ?? [];
         unset($result['_sub_queries']);
+        $result['learning_path'] = ResultFormatter::withDocumentFields($result['learning_path'] ?? [], $context['docs']);
 
         return array_merge($result, [
             'tags' => ResultFormatter::tags($context['docs'], config('bcg_topics.faculties', [])),
