@@ -62,11 +62,47 @@ final class RelationGraphBuilder
         ])->all();
 
         return [
-            'center' => ['label' => $entities[0], 'color' => '#2D5A43', 'type' => 'topic'],
+            'center' => ['label' => self::centerLabel($entities, $edges), 'color' => '#2D5A43', 'type' => 'topic'],
             'description' => 'กราฟความรู้จากความสัมพันธ์ในข้อมูล KU BCG (งานวิจัย KUKR, KU Forest, คอร์ส KU MOOC และชุดวิชา Non-Degree)',
             'nodes' => $nodes,
             'edges' => $edges,
         ];
+    }
+
+    /**
+     * The first query entity, or when no edge touches it, the entity with the most edges, spelled as the
+     * relations spell it, so the graph is drawn around a node it actually connects to. Falls back to the
+     * first entity when none of them has an edge.
+     *
+     * @param  list<string>  $entities
+     * @param  list<array<string, mixed>>  $edges
+     */
+    public static function centerLabel(array $entities, array $edges): string
+    {
+        $degree = [];
+        $spelling = [];
+        foreach ($edges as $edge) {
+            foreach ([$edge['from'], $edge['to']] as $label) {
+                $key = mb_strtolower(trim((string) $label));
+                $degree[$key] = ($degree[$key] ?? 0) + 1;
+                $spelling[$key] ??= (string) $label;
+            }
+        }
+
+        $first = mb_strtolower(trim($entities[0]));
+        if (isset($degree[$first])) {
+            return $spelling[$first];
+        }
+
+        $best = null;
+        foreach ($entities as $entity) {
+            $key = mb_strtolower(trim($entity));
+            if (($degree[$key] ?? 0) > ($best === null ? 0 : $degree[$best])) {
+                $best = $key;
+            }
+        }
+
+        return $best === null ? $entities[0] : $spelling[$best];
     }
 
     /**
