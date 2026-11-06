@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\GraphRag;
 
 use App\Services\GraphRag\Agent\ResultFormatter;
+use App\Services\GraphRag\DocumentSource;
 use App\Services\GraphRag\RelationGraphBuilder;
 use PHPUnit\Framework\TestCase;
 
@@ -23,6 +24,13 @@ class AiFieldsAndEdgeSelectionTest extends TestCase
         $this->assertSame('บทคัดย่อภาษาไทย', $evidence[0]['snippet_ai_th']);
         $this->assertSame(self::AI, $evidence[0]['ai_translation']);
         $this->assertSame(['title', 'source', 'url', 'snippet'], array_keys($evidence[1]));
+    }
+
+    public function test_free_text_search_matches_ai_translations(): void
+    {
+        foreach (['title_ai_th^2', 'keywords_ai_th', 'abstract_ai_th'] as $field) {
+            $this->assertContains($field, DocumentSource::SEARCH_FIELDS);
+        }
     }
 
     public function test_keyword_translations_stay_aligned_or_are_dropped(): void

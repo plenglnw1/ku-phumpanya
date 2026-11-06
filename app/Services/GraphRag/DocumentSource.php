@@ -29,6 +29,9 @@ final class DocumentSource
         'topic_names_en',
         'abstract',
         'abstract_en',
+        'title_ai_th^2',
+        'keywords_ai_th',
+        'abstract_ai_th',
     ];
 
     /**
