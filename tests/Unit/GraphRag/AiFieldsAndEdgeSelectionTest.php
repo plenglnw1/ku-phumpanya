@@ -26,6 +26,19 @@ class AiFieldsAndEdgeSelectionTest extends TestCase
         $this->assertSame(['title', 'source', 'url', 'snippet'], array_keys($evidence[1]));
     }
 
+    public function test_center_is_an_entity_the_edges_connect_to(): void
+    {
+        $edges = [
+            ['from' => 'Chitosan', 'to' => 'packaging', 'type' => 't'],
+            ['from' => 'Chitosan', 'to' => 'coating', 'type' => 't'],
+            ['from' => 'crab shells', 'to' => 'Chitosan', 'type' => 't'],
+        ];
+
+        $this->assertSame('Chitosan', RelationGraphBuilder::centerLabel(['rice bran oil', 'crab shells', 'chitosan'], $edges));
+        $this->assertSame('crab shells', RelationGraphBuilder::centerLabel(['crab shells', 'chitosan'], $edges));
+        $this->assertSame('rice bran oil', RelationGraphBuilder::centerLabel(['rice bran oil', 'eggs'], $edges));
+    }
+
     public function test_free_text_search_matches_ai_translations(): void
     {
         foreach (['title_ai_th^2', 'keywords_ai_th', 'abstract_ai_th'] as $field) {
