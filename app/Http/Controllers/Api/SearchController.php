@@ -15,7 +15,6 @@ use App\Services\GraphRag\GraphRagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 
 final class SearchController extends Controller
 {
@@ -97,15 +96,16 @@ final class SearchController extends Controller
 
     /**
      * Deletes one search of the signed-in user. Its learning progress goes with it
-     * through the `learning_progress` cascade.
+     * through the `learning_progress` cascade. Answers like `clear`, so the frontend
+     * reads both the same way.
      */
-    public function destroy(Request $request, SearchHistory $searchHistory): Response
+    public function destroy(Request $request, SearchHistory $searchHistory): JsonResponse
     {
         abort_unless($searchHistory->user_id === $request->user()->id, 403);
 
         $searchHistory->delete();
 
-        return response()->noContent();
+        return response()->json(['deleted' => 1]);
     }
 
     public function suggestions(): JsonResponse
