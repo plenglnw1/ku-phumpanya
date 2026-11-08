@@ -96,7 +96,9 @@ class SearchHistoryClearApiTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->deleteJson("/api/search/history/{$target->id}")->assertNoContent();
+        $this->deleteJson("/api/search/history/{$target->id}")
+            ->assertOk()
+            ->assertExactJson(['deleted' => 1]);
 
         $this->assertModelMissing($target);
         $this->assertModelExists($kept);
