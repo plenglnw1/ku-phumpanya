@@ -20,7 +20,7 @@ class AuthApiTest extends TestCase
 
         $response = $this->postJson('/api/auth/register/complete', [
             'role' => 'student',
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
             'department' => 'วนศาสตร์',
             'student_id' => '1234567890',
         ]);
@@ -49,7 +49,7 @@ class AuthApiTest extends TestCase
 
         $this->postJson('/api/auth/register/complete', [
             'role' => 'student',
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
             'department' => 'วนศาสตร์',
             'student_id' => '1234567890',
         ])->assertOk()
@@ -70,7 +70,7 @@ class AuthApiTest extends TestCase
 
         $this->postJson('/api/auth/register/complete', [
             'role' => 'researcher',
-            'faculty' => 'วนศาสตร์',
+            'faculty' => 'คณะวนศาสตร์',
             'department' => 'ป่าไม้',
             'employee_id' => 'EMP001',
             'research_affiliation' => 'KU Forest',

@@ -32,7 +32,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'role' => UserRole::Student,
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
             'department' => 'วนศาสตร์',
             'student_id' => fake()->unique()->numerify('##########'),
             'profile_completed_at' => now(),

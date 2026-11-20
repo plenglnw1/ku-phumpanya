@@ -29,7 +29,7 @@ class AdminMetricsTest extends TestCase
     public function test_business_summary_excludes_admins_and_counts_engagement(): void
     {
         config(['pdpa.consent_version' => 'v1']);
-        $student = User::factory()->create(['role' => UserRole::Student, 'faculty' => 'วนศาสตร์', 'consented_at' => now(), 'consent_version' => 'v1']);
+        $student = User::factory()->create(['role' => UserRole::Student, 'faculty' => 'คณะวนศาสตร์', 'consented_at' => now(), 'consent_version' => 'v1']);
         $teacher = User::factory()->create(['role' => UserRole::Teacher, 'faculty' => null, 'consented_at' => null]);
         $admin = User::factory()->create(['role' => UserRole::Admin]);
 
@@ -56,7 +56,7 @@ class AdminMetricsTest extends TestCase
 
         $this->assertSame(['query' => 'คาร์บอน', 'count' => 2, 'zero_results' => 0], $metrics->topQueries()[0]);
         $this->assertSame(['ลดคาร์บอน' => 2, 'ป่าไม้' => 1], $metrics->topConcepts());
-        $this->assertSame(['วนศาสตร์' => 2, 'ไม่ระบุคณะ' => 1], $metrics->searchesByFaculty());
+        $this->assertSame(['คณะวนศาสตร์' => 2, 'ไม่ระบุคณะ' => 1], $metrics->searchesByFaculty());
         $this->assertSame(3, collect($metrics->searchesPerDay(7))->sum('searches'));
     }
 

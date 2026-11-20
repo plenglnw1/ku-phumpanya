@@ -42,7 +42,7 @@ class AdminDashboardTest extends TestCase
 
         SearchHistory::create([
             'user_id' => $student->id, 'query' => 'คาร์บอน', 'status' => 'success',
-            'role_snapshot' => 'student', 'faculty_snapshot' => 'วนศาสตร์', 'total_latency_ms' => 1800,
+            'role_snapshot' => 'student', 'faculty_snapshot' => 'คณะวนศาสตร์', 'total_latency_ms' => 1800,
             'metrics' => ['top_node_labels' => ['ลดคาร์บอน'], 'gemini' => ['calls' => 2, 'total_tokens' => 900, 'rate_limited' => 0, 'fallbacks' => 0]],
         ]);
         SearchHistory::create([
