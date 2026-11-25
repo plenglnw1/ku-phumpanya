@@ -28,7 +28,7 @@ final class Synthesizer
         }
 
         $prompt = sprintf(
-            "Synthesize KU BCG answer for Thai/English academic audience.\nQuery: %s\n\nKey points:\n%s\n\nEntities: %s\n\nRelations:\n%s\n\nCourses: %s\n\nReturn JSON with title, overview (intro, analogy, research_basis, expert), learning_path (estimated_hours, subtitle, phases array with name, intro, modules[{title,hours,desc}]).",
+            "Synthesize KU BCG answer for a Thai academic audience.\nWrite every text value (title, overview, learning_path subtitle, phase names and intros, module titles and descriptions) in Thai, even when the key points are in English. Keep scientific terms, species names and proper names in English in parentheses where that helps.\nQuery: %s\n\nKey points:\n%s\n\nEntities: %s\n\nRelations:\n%s\n\nCourses: %s\n\nReturn JSON with title, overview (intro, analogy, research_basis, expert), learning_path (estimated_hours, subtitle, phases array with name, intro, modules[{title,hours,desc}]).",
             $query,
             implode("\n- ", $extracted['key_points'] ?? []),
             implode(', ', $extracted['entities'] ?? []),
