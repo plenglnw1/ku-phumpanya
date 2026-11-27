@@ -57,14 +57,14 @@ class AdminDashboardTest extends TestCase
             'role' => UserRole::Admin,
             'email_verified_at' => now(),
             'profile_completed_at' => now(),
-            'faculty' => 'วนศาสตร์',
+            'faculty' => 'คณะวนศาสตร์',
         ]);
 
         $student = User::factory()->create([
             'role' => UserRole::Student,
             'email_verified_at' => now(),
             'profile_completed_at' => now(),
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
         ]);
 
         SearchHistory::query()->create([
@@ -73,7 +73,7 @@ class AdminDashboardTest extends TestCase
             'status' => 'success',
             'query_type' => 'simple',
             'role_snapshot' => 'student',
-            'faculty_snapshot' => 'เกษตรศาสตร์',
+            'faculty_snapshot' => 'คณะเกษตร',
             'total_latency_ms' => 250,
             'total_nodes_found' => 3,
             'metrics' => [

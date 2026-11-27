@@ -32,7 +32,7 @@ class ProfileApiTest extends TestCase
         $this->patchJson('/api/profile', [
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'faculty' => 'วนศาสตร์',
+            'faculty' => 'คณะวนศาสตร์',
             'department' => 'ป่าไม้',
             'student_id' => $user->student_id,
         ])

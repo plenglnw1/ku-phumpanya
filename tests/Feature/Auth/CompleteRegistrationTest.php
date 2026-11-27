@@ -19,7 +19,7 @@ class CompleteRegistrationTest extends TestCase
 
         $response = $this->actingAs($user)->post('/register/complete', [
             'role' => 'student',
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
             'department' => 'วนศาสตร์',
             'student_id' => '6410000001',
         ]);
@@ -38,7 +38,7 @@ class CompleteRegistrationTest extends TestCase
 
         $response = $this->actingAs($user)->post('/register/complete', [
             'role' => 'researcher',
-            'faculty' => 'วนศาสตร์',
+            'faculty' => 'คณะวนศาสตร์',
             'department' => 'BCG Research',
             'employee_id' => '10000001',
             'research_affiliation' => 'ศูนย์วิจัย BCG',
@@ -57,7 +57,7 @@ class CompleteRegistrationTest extends TestCase
 
         $response = $this->actingAs($user)->post('/register/complete', [
             'role' => 'teacher',
-            'faculty' => 'อุตสาหกรรมเกษตร',
+            'faculty' => 'คณะอุตสาหกรรมเกษตร',
             'department' => 'เทคโนโลยีชีวภาพ',
         ]);
 
@@ -70,7 +70,7 @@ class CompleteRegistrationTest extends TestCase
 
         $response = $this->actingAs($user)->post('/register/complete', [
             'role' => 'admin',
-            'faculty' => 'เกษตรศาสตร์',
+            'faculty' => 'คณะเกษตร',
             'department' => 'วนศาสตร์',
             'employee_id' => '99999999',
         ]);
