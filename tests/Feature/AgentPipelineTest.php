@@ -66,6 +66,28 @@ class AgentPipelineTest extends TestCase
         $this->assertArrayHasKey('_meta', $result);
     }
 
+    public function test_synthesizer_prompt_asks_for_thai_output(): void
+    {
+        config()->set('gemini.enabled', true);
+        config()->set('gemini.api_key', 'test-key');
+        config()->set('gemini.force_tier', 'basic');
+        config()->set('qdrant.enabled', false);
+        config()->set('elasticsearch.enabled', false);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response($this->fakeGeminiResponse([
+                'title' => 'ชีวมวล',
+                'overview' => ['intro' => 'ก', 'analogy' => 'ข', 'research_basis' => 'ค', 'expert' => 'ง'],
+                'learning_path' => ['estimated_hours' => '90', 'subtitle' => 'จ', 'phases' => []],
+            ])),
+        ]);
+
+        app(AgentPipeline::class)->run('ชีวมวลและพลังงานทดแทน');
+
+        Http::assertSent(fn ($request): bool => str_contains($request->body(), 'Synthesize KU BCG answer')
+            && str_contains($request->body(), 'in Thai'));
+    }
+
     public function test_intermediate_tier_forced_via_config(): void
     {
         config()->set('gemini.enabled', true);
